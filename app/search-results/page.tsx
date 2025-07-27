@@ -3,15 +3,11 @@
 import { useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
+import { Card, CardContent } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { useBooking } from "../../context/BookingContext";
 import { mockBuses } from "../../lib/mockData";
+import { Bus, Seat } from "../../context/BookingContext";
 import {
   Clock,
   MapPin,
@@ -48,14 +44,14 @@ function SearchResultsContent() {
     }
   }, [state.searchData, router]);
 
-  const handleSelectBus = (bus: any) => {
+  const handleSelectBus = (bus: Bus) => {
     dispatch({ type: "SET_SELECTED_BUS", payload: bus });
     dispatch({ type: "SET_STEP", payload: 3 });
     router.push("/seat-selection");
   };
 
-  const availableSeats = (bus: any) =>
-    bus.seats.filter((seat: any) => seat.isAvailable).length;
+  const availableSeats = (bus: Bus) =>
+    bus.seats.filter((seat: Seat) => seat.isAvailable).length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -88,14 +84,17 @@ function SearchResultsContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search Summary */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-8">
-              <div className="flex items-center space-x-2">
-                <MapPin className="w-5 h-5 text-blue-600" />
-                <span className="font-semibold">{state.searchData.from}</span>
-                <span className="text-gray-400">→</span>
-                <span className="font-semibold">{state.searchData.to}</span>
-              </div>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {/* This will be the top row on mobile */}
+            <div className="flex items-center space-x-2">
+              <MapPin className="w-5 h-5 text-blue-600" />
+              <span className="font-semibold">{state.searchData.from}</span>
+              <span className="text-gray-400">→</span>
+              <span className="font-semibold">{state.searchData.to}</span>
+            </div>
+
+            {/* This will be the bottom row on mobile */}
+            <div className="flex items-center justify-between space-x-4">
               <div className="flex items-center space-x-2">
                 <Clock className="w-5 h-5 text-green-600" />
                 <span>
