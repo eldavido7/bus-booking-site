@@ -189,7 +189,7 @@ function SeatSelectionContent() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>Select Your Seats</span>
+                  <span className="text-xl font-medium">Select Your Seats</span>
                   <Badge
                     variant={
                       state.selectedBus.busType === "luxury"

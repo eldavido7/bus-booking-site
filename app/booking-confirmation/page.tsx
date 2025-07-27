@@ -192,7 +192,7 @@ function BookingConfirmationContent() {
         {/* Booking Details */}
         <div ref={ticketRef}>
           {/* Logo for PDF */}
-          <div className="text-center mb-5 pt-5">
+          {/* <div className="text-center mb-5 pt-5">
             <div className="inline-flex items-center space-x-2">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold logo-text">T</span>
@@ -201,18 +201,37 @@ function BookingConfirmationContent() {
                 TravelEase
               </span>
             </div>
-          </div>
+          </div> */}
 
           <Card className="mb-8">
             <CardHeader className="bg-blue-600 text-white">
-              <CardTitle className="flex items-center justify-between">
-                <span className="header-text">Booking Confirmation</span>
-                <Badge variant="secondary" className="bg-white text-blue-600">
-                  <span className="header-text">
-                    {generateBookingReference()}
-                  </span>
-                </Badge>
-              </CardTitle>
+              <div className="flex justify-between items-start">
+                {/* Left Column: Logo and Title */}
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                      <span className="text-blue-600 font-bold header-text">
+                        T
+                      </span>
+                    </div>
+                    <span className="text-xl font-bold header-text">
+                      TravelEase
+                    </span>
+                  </div>
+                  <CardTitle className="mt-4 text-lg font-bold header-text">
+                    Booking Confirmation
+                  </CardTitle>
+                </div>
+
+                {/* Right Column: Booking Reference */}
+                <div className="text-right">
+                  <Badge variant="secondary" className="bg-white text-blue-600">
+                    <span className="header-text">
+                      {generateBookingReference()}
+                    </span>
+                  </Badge>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="p-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -412,10 +431,6 @@ function BookingConfirmationContent() {
           >
             <Download className="w-4 h-4" />
             <span>Download Ticket</span>
-          </Button>
-          <Button variant="outline" className="flex items-center space-x-2">
-            <Mail className="w-4 h-4" />
-            <span>Email Ticket</span>
           </Button>
           <Button
             onClick={handleNewBooking}

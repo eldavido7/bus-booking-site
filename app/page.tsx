@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -29,7 +30,7 @@ import { toast } from "sonner";
 
 export default function HomePage() {
   const router = useRouter();
-  const { state, dispatch } = useBooking();
+  const { dispatch } = useBooking();
   const [searchForm, setSearchForm] = useState({
     from: "",
     to: "",
@@ -55,48 +56,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">T</span>
-              </div>
-              <span className="text-2xl font-bold text-gray-900">
-                TravelEase
-              </span>
-            </div>
-            <nav className="hidden md:flex items-center space-x-8">
-              <a
-                href="#"
-                className="text-gray-600 hover:text-blue-600 transition-colors"
-              >
-                Home
-              </a>
-              <a
-                href="/trip-search"
-                className="text-gray-600 hover:text-blue-600 transition-colors"
-              >
-                Find Trip
-              </a>
-              <a
-                href="/about"
-                className="text-gray-600 hover:text-blue-600 transition-colors"
-              >
-                About
-              </a>
-              <a
-                href="/contact"
-                className="text-gray-600 hover:text-blue-600 transition-colors"
-              >
-                Contact
-              </a>
-            </nav>
-          </div>
-        </div>
-      </header>
-
       {/* Hero Section */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -299,9 +258,11 @@ export default function HomePage() {
               <Card key={index} className="bg-white shadow-lg">
                 <CardContent className="p-8">
                   <div className="flex items-center mb-6">
-                    <img
+                    <Image
                       src={testimonial.image}
                       alt={testimonial.name}
+                      width={48}
+                      height={48}
                       className="w-12 h-12 rounded-full object-cover mr-4"
                     />
                     <div>
@@ -332,103 +293,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-6">
-                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">T</span>
-                </div>
-                <span className="text-2xl font-bold">TravelEase</span>
-              </div>
-              <p className="text-gray-400">
-                Making travel comfortable, safe, and affordable for everyone
-                across Nigeria.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
-              <ul className="space-y-3 text-gray-400">
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Book a Trip
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/trip-search"
-                    className="hover:text-white transition-colors"
-                  >
-                    Track Booking
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/contact"
-                    className="hover:text-white transition-colors"
-                  >
-                    Help Center
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/about"
-                    className="hover:text-white transition-colors"
-                  >
-                    About Us
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Support</h3>
-              <ul className="space-y-3 text-gray-400">
-                <li>
-                  <a
-                    href="/contact"
-                    className="hover:text-white transition-colors"
-                  >
-                    Customer Care
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Terms of Service
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Privacy Policy
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Refund Policy
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Contact Info</h3>
-              <ul className="space-y-3 text-gray-400">
-                <li>Email: support@travelease.com</li>
-                <li>Phone: +234 800 123 4567</li>
-                <li>Available 24/7</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 TravelEase. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

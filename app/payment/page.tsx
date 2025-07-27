@@ -9,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
 import { useBooking } from "../../context/BookingContext";
 import {
   ArrowLeft,
@@ -22,7 +21,7 @@ import { toast } from "sonner";
 
 function PaymentContent() {
   const router = useRouter();
-  const { state, dispatch } = useBooking();
+  const { state } = useBooking();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
@@ -56,8 +55,10 @@ function PaymentContent() {
       setTimeout(() => {
         router.push("/booking-confirmation");
       }, 2000);
-    } catch (error) {
-      toast.error("Payment failed. Please try again.");
+    } catch (error: unknown) {
+      toast.error("Payment failed. Please try again.", {
+        description: (error as Error).message,
+      });
       setIsProcessing(false);
     }
   };
@@ -139,9 +140,6 @@ function PaymentContent() {
                   <div className="border border-blue-200 rounded-lg p-6 bg-blue-50">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                          <CreditCard className="w-6 h-6 text-white" />
-                        </div>
                         <div>
                           <h3 className="font-semibold text-gray-900">
                             Pay with Paystack
@@ -151,7 +149,6 @@ function PaymentContent() {
                           </p>
                         </div>
                       </div>
-                      <Badge variant="default">Recommended</Badge>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -308,7 +305,7 @@ function PaymentContent() {
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Pricing</h4>
                   <div className="space-y-2 text-sm">
-                    {state.selectedSeats.map((seat, index) => (
+                    {state.selectedSeats.map((seat) => (
                       <div key={seat.id} className="flex justify-between">
                         <span>Seat {seat.number}</span>
                         <span>

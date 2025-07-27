@@ -14,7 +14,6 @@ import { Badge } from "../../components/ui/badge";
 import {
   Search,
   MapPin,
-  Calendar,
   Clock,
   Users,
   Phone,
@@ -26,7 +25,20 @@ import { toast } from "sonner";
 
 export default function TripSearch() {
   const [bookingRef, setBookingRef] = useState("");
-  const [searchResult, setSearchResult] = useState<any>(null);
+  type Booking = {
+    reference: string;
+    status: string;
+    route: { from: string; to: string };
+    date: string;
+    time: string;
+    operator: string;
+    passengers: { name: string; seat: string }[];
+    contact: { email: string; phone: string };
+    totalAmount: number;
+    bookingDate: string;
+  };
+
+  const [searchResult, setSearchResult] = useState<Booking | null>(null);
   const [isSearching, setIsSearching] = useState(false);
 
   // Mock booking data for demonstration
@@ -88,8 +100,10 @@ export default function TripSearch() {
         setSearchResult(null);
         toast.error("Booking not found. Please check your reference number.");
       }
-    } catch (error) {
-      toast.error("Search failed. Please try again.");
+    } catch (error: unknown) {
+      toast.error("Search failed. Please try again.", {
+        description: (error as Error).message,
+      });
     } finally {
       setIsSearching(false);
     }
@@ -122,7 +136,7 @@ export default function TripSearch() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      {/* <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -134,31 +148,31 @@ export default function TripSearch() {
               </span>
             </div>
             <nav className="hidden md:flex items-center space-x-8">
-              <a
+              <Link
                 href="/"
                 className="text-gray-600 hover:text-blue-600 transition-colors"
               >
                 Home
-              </a>
-              <a href="/trip-search" className="text-blue-600 font-medium">
+              </Link>
+              <Link href="/trip-search" className="text-blue-600 font-medium">
                 Find Trip
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/about"
                 className="text-gray-600 hover:text-blue-600 transition-colors"
               >
                 About
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/contact"
                 className="text-gray-600 hover:text-blue-600 transition-colors"
               >
                 Contact
-              </a>
+              </Link>
             </nav>
           </div>
         </div>
-      </header>
+      </header> */}
 
       {/* Hero Section */}
       <section className="py-20 bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -183,21 +197,16 @@ export default function TripSearch() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="bookingRef">Booking Reference Number</Label>
+            <div className="space-y-2">
+              <Label htmlFor="bookingRef">Booking Reference Number</Label>
+              <div className="flex flex-col sm:flex-row items-center gap-4">
                 <Input
                   id="bookingRef"
                   value={bookingRef}
                   onChange={(e) => setBookingRef(e.target.value)}
                   placeholder="e.g., TE12345678"
-                  className="text-center font-mono text-lg"
+                  className="flex-1 text-center font-mono text-lg"
                 />
-                <p className="text-sm text-gray-600">
-                  Your booking reference was sent to your email after booking
-                </p>
-              </div>
-              <div className="flex items-end">
                 <Button
                   onClick={handleSearch}
                   disabled={isSearching}
@@ -216,6 +225,9 @@ export default function TripSearch() {
                   )}
                 </Button>
               </div>
+              <p className="text-sm text-gray-600">
+                Your booking reference was sent to your email after booking
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -334,7 +346,10 @@ export default function TripSearch() {
                 </h3>
                 <div className="space-y-3">
                   {searchResult.passengers.map(
-                    (passenger: any, index: number) => (
+                    (
+                      passenger: { name: string; seat: string },
+                      index: number
+                    ) => (
                       <div
                         key={index}
                         className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
@@ -402,7 +417,7 @@ export default function TripSearch() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
+      {/* <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
@@ -422,33 +437,33 @@ export default function TripSearch() {
               <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
               <ul className="space-y-3 text-gray-400">
                 <li>
-                  <a href="/" className="hover:text-white transition-colors">
+                  <Link href="/" className="hover:text-white transition-colors">
                     Book a Trip
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a
+                  <Link
                     href="/trip-search"
                     className="hover:text-white transition-colors"
                   >
                     Track Booking
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a
+                  <Link
                     href="/contact"
                     className="hover:text-white transition-colors"
                   >
                     Help Center
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a
+                  <Link
                     href="/about"
                     className="hover:text-white transition-colors"
                   >
                     About Us
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -496,7 +511,7 @@ export default function TripSearch() {
             <p>&copy; 2024 TravelEase. All rights reserved.</p>
           </div>
         </div>
-      </footer>
+      </footer> */}
     </div>
   );
 }
