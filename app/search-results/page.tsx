@@ -6,8 +6,8 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { useBooking } from "../../context/BookingContext";
-import { mockBuses } from "../../lib/mockData";
-import { Bus, Seat } from "../../context/BookingContext";
+import { mockBuses, mockTrips } from "../../lib/mockData";
+import { Trip, Bus, Seat } from "../../context/BookingContext";
 import {
   Clock,
   MapPin,
@@ -18,6 +18,7 @@ import {
   Tv,
   ArrowLeft,
 } from "lucide-react";
+import Image from "next/image";
 
 const amenityIcons = {
   AC: Zap,
@@ -44,14 +45,27 @@ function SearchResultsContent() {
     }
   }, [state.searchData, router]);
 
-  const handleSelectBus = (bus: Bus) => {
-    dispatch({ type: "SET_SELECTED_BUS", payload: bus });
-    dispatch({ type: "SET_STEP", payload: 3 });
-    router.push("/seat-selection");
+  const handleSelectTrip = (trip: Trip) => {
+    const bus = mockBuses.find((b) => b.id === trip.busId);
+    if (bus) {
+      dispatch({ type: "SET_SELECTED_TRIP", payload: trip });
+      dispatch({ type: "SET_SELECTED_BUS", payload: bus });
+      dispatch({ type: "SET_STEP", payload: 3 });
+      router.push("/seat-selection");
+    }
   };
 
   const availableSeats = (bus: Bus) =>
     bus.seats.filter((seat: Seat) => seat.isAvailable).length;
+
+  const filteredTrips = mockTrips.filter(
+    (trip) =>
+      trip.from.toLowerCase() === state.searchData.from.toLowerCase() &&
+      trip.to.toLowerCase() === state.searchData.to.toLowerCase() &&
+      trip.date.toLocaleDateString() ===
+        new Date(state.searchData.date).toLocaleDateString() &&
+      trip.isAvailable
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -69,12 +83,12 @@ function SearchResultsContent() {
                 <span>Back to Search</span>
               </Button>
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold">T</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900">
-                  TravelEase
-                </span>
+                <Image
+                  src="/logo.png"
+                  alt="TravelEase Logo"
+                  width={128}
+                  height={128}
+                />
               </div>
             </div>
           </div>
@@ -87,7 +101,7 @@ function SearchResultsContent() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             {/* This will be the top row on mobile */}
             <div className="flex items-center space-x-2">
-              <MapPin className="w-5 h-5 text-blue-600" />
+              <MapPin className="w-5 h-5 text-primary" />
               <span className="font-semibold">{state.searchData.from}</span>
               <span className="text-gray-400">→</span>
               <span className="font-semibold">{state.searchData.to}</span>
@@ -101,7 +115,7 @@ function SearchResultsContent() {
                   {new Date(state.searchData.date).toLocaleDateString()}
                 </span>
               </div>
-              <Badge variant="secondary">
+              <Badge variant="normal">
                 {state.searchData.passengers} passenger
                 {state.searchData.passengers > 1 ? "s" : ""}
               </Badge>
@@ -112,123 +126,133 @@ function SearchResultsContent() {
         {/* Results */}
         <div className="space-y-6">
           <h2 className="text-2xl font-bold text-gray-900">
-            Available Buses ({mockBuses.length})
+            Available Trips ({filteredTrips.length})
           </h2>
 
-          {mockBuses.map((bus) => (
-            <Card
-              key={bus.id}
-              className="overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                  {/* Bus Info */}
-                  <div className="lg:col-span-2">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-900">
-                          {bus.operator}
-                        </h3>
-                        <div className="flex items-center space-x-1 mt-1">
-                          <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                          <span className="text-sm text-gray-600">
-                            {bus.rating}
-                          </span>
-                          <Badge
-                            variant={
-                              bus.busType === "luxury" ? "default" : "secondary"
-                            }
-                            className="ml-2"
-                          >
-                            {bus.busType === "luxury" ? "Luxury" : "Standard"}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-6 mb-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-900">
-                          {bus.departureTime}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {state.searchData.from}
-                        </div>
-                      </div>
-                      <div className="flex-1 text-center">
-                        <div className="text-sm text-gray-600 mb-1">
-                          {bus.duration}
-                        </div>
-                        <div className="w-full h-px bg-gray-300 relative">
-                          <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-600 rounded-full -mt-1"></div>
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-900">
-                          {bus.arrivalTime}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {state.searchData.to}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Amenities */}
-                    <div className="flex flex-wrap gap-2">
-                      {bus.amenities.map((amenity) => {
-                        const IconComponent =
-                          amenityIcons[amenity as keyof typeof amenityIcons] ||
-                          MapPin;
-                        return (
-                          <div
-                            key={amenity}
-                            className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded text-xs"
-                          >
-                            <IconComponent className="w-3 h-3" />
-                            <span>{amenity}</span>
+          {filteredTrips.map((trip) => {
+            const bus = mockBuses.find((b) => b.id === trip.busId);
+            if (!bus) return null;
+            return (
+              <Card
+                key={trip.id}
+                className="overflow-hidden hover:shadow-lg transition-shadow"
+              >
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {/* Trip Info */}
+                    <div className="lg:col-span-2">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-xl font-semibold text-gray-900">
+                            {bus.operator}
+                          </h3>
+                          <div className="flex items-center space-x-1 mt-1">
+                            <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                            <span className="text-sm text-gray-600">
+                              {bus.rating}
+                            </span>
+                            <Badge
+                              variant={
+                                bus.busType === "luxury" ? "default" : "normal"
+                              }
+                              className="ml-2"
+                            >
+                              {bus.busType === "luxury" ? "Luxury" : "Standard"}
+                            </Badge>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                        </div>
+                      </div>
 
-                  {/* Availability & Price */}
-                  <div className="lg:col-span-1 text-center lg:text-left">
-                    <div className="mb-4">
-                      <div className="text-sm text-gray-600">
-                        Available Seats
+                      <div className="flex items-center space-x-6 mb-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-gray-900">
+                            {trip.departureTime}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {trip.from}
+                          </div>
+                        </div>
+                        <div className="flex-1 text-center">
+                          <div className="text-sm text-gray-600 mb-1">
+                            {trip.duration}
+                          </div>
+                          <div className="w-full h-px bg-gray-300 relative">
+                            <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary rounded-full -mt-1"></div>
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-gray-900">
+                            {trip.arrivalTime}
+                          </div>
+                          <div className="text-sm text-gray-600">{trip.to}</div>
+                        </div>
                       </div>
-                      <div className="text-lg font-semibold text-green-600">
-                        {availableSeats(bus)} seats
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Price & Action */}
-                  <div className="lg:col-span-1 flex flex-col justify-center items-end">
-                    <div className="text-right mb-4">
-                      <div className="text-sm text-gray-600">Starting from</div>
-                      <div className="text-3xl font-bold text-gray-900">
-                        ₦{bus.price.toLocaleString()}
+                      {/* Amenities */}
+                      <div className="flex flex-wrap gap-2">
+                        {bus.amenities.map((amenity) => {
+                          const IconComponent =
+                            amenityIcons[
+                              amenity as keyof typeof amenityIcons
+                            ] || MapPin;
+                          return (
+                            <div
+                              key={amenity}
+                              className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded text-xs"
+                            >
+                              <IconComponent className="w-3 h-3" />
+                              <span>{amenity}</span>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <div className="text-sm text-gray-600">per person</div>
                     </div>
-                    <Button
-                      onClick={() => handleSelectBus(bus)}
-                      className="w-full lg:w-auto bg-blue-600 hover:bg-blue-700"
-                      disabled={
-                        availableSeats(bus) < state.searchData.passengers
-                      }
-                    >
-                      {availableSeats(bus) < state.searchData.passengers
-                        ? "Not Available"
-                        : "Select Seats"}
-                    </Button>
+
+                    {/* Availability & Price */}
+                    <div className="lg:col-span-1 text-center lg:text-center">
+                      <div className="mb-4">
+                        <div className="text-sm text-gray-600">
+                          Available Seats
+                        </div>
+                        <div className="text-lg font-semibold text-green-600">
+                          {availableSeats(bus)} seats
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Price & Action */}
+                    <div className="lg:col-span-1 flex flex-col justify-center items-end">
+                      <div className="text-right mb-4">
+                        <div className="text-sm text-gray-600">
+                          Starting from
+                        </div>
+                        <div className="text-3xl font-bold text-gray-900">
+                          ₦{trip.price.toLocaleString()}
+                        </div>
+                        <div className="text-sm text-gray-600">per person</div>
+                      </div>
+                      <Button
+                        onClick={() => handleSelectTrip(trip)}
+                        className="w-full lg:w-auto bg-primary hover:bg-blue-700"
+                        disabled={
+                          availableSeats(bus) < state.searchData.passengers
+                        }
+                      >
+                        {availableSeats(bus) < state.searchData.passengers
+                          ? "Not Available"
+                          : "Select Seats"}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
+          {filteredTrips.length === 0 && (
+            <div className="text-center text-gray-500 py-8">
+              No trips found for this route and date.
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -240,7 +264,7 @@ export default function SearchResults() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
         </div>
       }
     >

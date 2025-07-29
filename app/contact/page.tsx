@@ -82,7 +82,7 @@ export default function Contact() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Send className="w-5 h-5 text-blue-600" />
+                  <Send className="w-5 h-5 text-primary" />
                   <span>Send us a Message</span>
                 </CardTitle>
               </CardHeader>
@@ -135,7 +135,7 @@ export default function Contact() {
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    className="w-full bg-primary hover:bg-blue-700"
                   >
                     {isSubmitting ? (
                       <div className="flex items-center space-x-2">
@@ -163,7 +163,7 @@ export default function Contact() {
               <CardContent className="space-y-6">
                 <div className="flex items-start space-x-4">
                   <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Phone className="w-6 h-6 text-blue-600" />
+                    <Phone className="w-6 h-6 text-primary" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">
@@ -172,8 +172,8 @@ export default function Contact() {
                     <p className="text-gray-600 mb-2">
                       Call us for immediate assistance
                     </p>
-                    <p className="font-medium text-blue-600">
-                      +234 800 123 4567
+                    <p className="font-medium text-primary">
+                      +234 903 369 6516
                     </p>
                     <p className="text-sm text-gray-500">Available 24/7</p>
                   </div>
@@ -191,7 +191,7 @@ export default function Contact() {
                       Send us an email anytime
                     </p>
                     <p className="font-medium text-green-600">
-                      support@travelease.com
+                      kadzai_t&l@gmail.com
                     </p>
                     <p className="text-sm text-gray-500">
                       Response within 2 hours
@@ -201,7 +201,7 @@ export default function Contact() {
 
                 <div className="flex items-start space-x-4">
                   <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <MapPin className="w-6 h-6 text-purple-600" />
+                    <MapPin className="w-6 h-6 text-secondary" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">
@@ -210,12 +210,12 @@ export default function Contact() {
                     <p className="text-gray-600 mb-2">
                       Visit us at our main office
                     </p>
-                    <p className="font-medium text-purple-600">
-                      123 Transport Avenue,
+                    <p className="font-medium text-secondary">
+                      Suite A10, Mazado Plaza,
                       <br />
-                      Victoria Island, Lagos
+                      Shettima A. Mungono Crescent,
                       <br />
-                      Nigeria
+                      FCT Abuja.
                     </p>
                   </div>
                 </div>

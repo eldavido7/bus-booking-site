@@ -1,7 +1,16 @@
 "use client";
 
 import { Card, CardContent } from "../../components/ui/card";
-import { Shield, Clock, Headphones, Users, Award, MapPin } from "lucide-react";
+import {
+  Shield,
+  Clock,
+  Headphones,
+  Users,
+  Award,
+  MapPin,
+  Target,
+  Lightbulb,
+} from "lucide-react";
 import Image from "next/image";
 
 export default function About() {
@@ -39,6 +48,21 @@ export default function About() {
     },
   ];
 
+  const mission = [
+    {
+      icon: Target,
+      title: "Our Mission",
+      description:
+        "To provide efficient, reliable, and eco-friendly transport solutions while achieving economic growth and exceeding customer expectations.",
+    },
+    {
+      icon: Lightbulb,
+      title: "Our Vision",
+      description:
+        "To revolutionize the transport and logistics industry in Nigeria through exceptional service delivery, innovation, and sustainability",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
@@ -48,8 +72,11 @@ export default function About() {
             About TravelEase
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Connecting Nigeria through comfortable, reliable, and affordable bus
-            transportation since 2014.
+            KADZAI TRANSPORT AND LOGISTICS is a forward-thinking brand
+            positioned to redefine the Nigerian transport and logistics
+            industry. With a mission rooted in efficiency, reliability, and
+            sustainability, KADZAI delivers goods and services seamlessly from
+            one destination to another—always with excellence at its core
           </p>
         </div>
       </section>
@@ -61,7 +88,7 @@ export default function About() {
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <stat.icon className="w-8 h-8 text-blue-600" />
+                  <stat.icon className="w-8 h-8 text-primary" />
                 </div>
                 <div className="text-3xl font-bold text-gray-900 mb-2">
                   {stat.value}
@@ -83,23 +110,28 @@ export default function About() {
               </h2>
               <div className="space-y-4 text-gray-600">
                 <p>
-                  TravelEase was founded in 2014 with a simple mission: to make
-                  intercity travel in Nigeria comfortable, reliable, and
-                  accessible to everyone. What started as a small transport
-                  company with just 5 buses has grown into one of Nigeria&apos;s
-                  most trusted travel brands.
+                  Guided by a strong vision to revolutionize the sector through
+                  innovation and exceptional service delivery, the brand is
+                  built on values of safety, customer satisfaction, and
+                  eco-conscious practices. More than just a logistics company,
+                  KADZAI T&L is a premium service provider, aiming to create a
+                  strong emotional connection with every traveler—making each
+                  journey not just simple, but memorable.
                 </p>
                 <p>
-                  Over the years, we&apos;ve invested heavily in modern fleet
-                  management, customer service training, and technology to
-                  ensure that every journey with us is safe and enjoyable. Our
-                  commitment to excellence has earned us the trust of over
-                  50,000 satisfied customers.
-                </p>
-                <p>
-                  Today, we operate across 25+ cities in Nigeria, connecting
-                  families, enabling business, and making dreams possible
-                  through reliable transportation.
+                  Our audience includes adult travelers of all kinds, across
+                  both genders, who value comfort, professionalism, and
+                  hospitality. The brand’s tone is formal yet welcoming, and its
+                  personality exudes a professional yet homely presence—designed
+                  to stand out through excellence and care in a traditionally
+                  rigid industry. Visually, KADZAI T&L embraces a vibrant and
+                  iconic identity, brought to life through an icon-based logo,
+                  bold colors, and design elements that communicate energy,
+                  trust, and movement. Every detail is thoughtfully crafted to
+                  support our short-term goals of increasing brand visibility
+                  and expanding route coverage, and our long-term ambition of
+                  becoming a leading luxury transport brand in Nigeria and
+                  beyond.
                 </p>
               </div>
             </div>
@@ -119,7 +151,26 @@ export default function About() {
       {/* Values Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {mission.map((value, index) => (
+              <Card
+                key={index}
+                className="text-center p-6 hover:shadow-lg transition-shadow"
+              >
+                <CardContent className="p-0">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <value.icon className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                    {value.title}
+                  </h3>
+                  <p className="text-gray-600">{value.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="text-center mb-16 mt-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
               Our Values
             </h2>
@@ -136,7 +187,7 @@ export default function About() {
               >
                 <CardContent className="p-0">
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <value.icon className="w-8 h-8 text-blue-600" />
+                    <value.icon className="w-8 h-8 text-primary" />
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">
                     {value.title}
@@ -201,7 +252,7 @@ export default function About() {
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">
                       {member.name}
                     </h3>
-                    <p className="text-blue-600 font-medium mb-2">
+                    <p className="text-primary font-medium mb-2">
                       {member.role}
                     </p>
                     <p className="text-gray-600 text-sm">{member.bio}</p>

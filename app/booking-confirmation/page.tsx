@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import Image from "next/image";
 
 function BookingConfirmationContent() {
   const router = useRouter();
@@ -29,13 +30,20 @@ function BookingConfirmationContent() {
 
   useEffect(() => {
     if (
+      !state.selectedTrip ||
       !state.selectedBus ||
       state.selectedSeats.length === 0 ||
       state.passengers.length === 0
     ) {
       router.push("/");
     }
-  }, [state, router]);
+  }, [
+    state.selectedTrip,
+    state.selectedBus,
+    state.selectedSeats,
+    state.passengers,
+    router,
+  ]);
 
   const generateBookingReference = () => {
     return `TE${Date.now().toString().slice(-8)}`;
@@ -47,6 +55,7 @@ function BookingConfirmationContent() {
   };
 
   if (
+    !state.selectedTrip ||
     !state.selectedBus ||
     state.selectedSeats.length === 0 ||
     state.passengers.length === 0
@@ -109,8 +118,7 @@ function BookingConfirmationContent() {
       const imgWidth = 190;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      // Handle multi-page PDFs if content is too long
-      const pageHeight = 277; // A4 height minus margins
+      const pageHeight = 277;
       let heightLeft = imgHeight;
       let position = 10;
 
@@ -161,21 +169,6 @@ function BookingConfirmationContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">T</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">
-                TravelEase
-              </span>
-            </div>
-          </div>
-        </div>
-      </header>
-
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Success Message */}
         <div className="text-center mb-8">
@@ -191,32 +184,18 @@ function BookingConfirmationContent() {
 
         {/* Booking Details */}
         <div ref={ticketRef}>
-          {/* Logo for PDF */}
-          {/* <div className="text-center mb-5 pt-5">
-            <div className="inline-flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold logo-text">T</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900 logo-text">
-                TravelEase
-              </span>
-            </div>
-          </div> */}
-
           <Card className="mb-8">
-            <CardHeader className="bg-blue-600 text-white">
+            <CardHeader className="bg-primary text-white">
               <div className="flex justify-between items-start">
                 {/* Left Column: Logo and Title */}
                 <div>
                   <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                      <span className="text-blue-600 font-bold header-text">
-                        T
-                      </span>
-                    </div>
-                    <span className="text-xl font-bold header-text">
-                      TravelEase
-                    </span>
+                    <Image
+                      src="/logowhite.png"
+                      alt="TravelEase Logo"
+                      width={96}
+                      height={96}
+                    />
                   </div>
                   <CardTitle className="mt-4 text-lg font-bold header-text">
                     Booking Confirmation
@@ -225,7 +204,7 @@ function BookingConfirmationContent() {
 
                 {/* Right Column: Booking Reference */}
                 <div className="text-right">
-                  <Badge variant="secondary" className="bg-white text-blue-600">
+                  <Badge variant="secondary" className="bg-white text-primary">
                     <span className="header-text">
                       {generateBookingReference()}
                     </span>
@@ -238,19 +217,21 @@ function BookingConfirmationContent() {
                 {/* Trip Information */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                    <MapPin className="w-5 h-5 text-blue-600" />
+                    <MapPin className="w-5 h-5 text-primary" />
                     <span className="section-text">Trip Information</span>
                   </h3>
                   <div className="space-y-3">
                     <div className="flex justify-between">
                       <span className="text-gray-600">From:</span>
                       <span className="font-medium">
-                        {state.searchData.from}
+                        {state.selectedTrip.from}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">To:</span>
-                      <span className="font-medium">{state.searchData.to}</span>
+                      <span className="font-medium">
+                        {state.selectedTrip.to}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Date:</span>
@@ -261,19 +242,19 @@ function BookingConfirmationContent() {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Departure:</span>
                       <span className="font-medium">
-                        {state.selectedBus.departureTime}
+                        {state.selectedTrip.departureTime}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Arrival:</span>
                       <span className="font-medium">
-                        {state.selectedBus.arrivalTime}
+                        {state.selectedTrip.arrivalTime}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Duration:</span>
                       <span className="font-medium">
-                        {state.selectedBus.duration}
+                        {state.selectedTrip.duration}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -306,7 +287,7 @@ function BookingConfirmationContent() {
                               {passenger.age} years, {passenger.gender}
                             </div>
                             {index === 0 && (
-                              <div className="text-xs text-blue-600 mt-1">
+                              <div className="text-xs text-primary mt-1">
                                 Primary Contact
                               </div>
                             )}
@@ -335,7 +316,7 @@ function BookingConfirmationContent() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center space-x-2">
-                    <Mail className="w-4 h-4 text-blue-600" />
+                    <Mail className="w-4 h-4 text-primary" />
                     <span className="text-gray-600 contact-text">Email:</span>
                     <span className="font-medium contact-text">
                       {state.passengers[0]?.email}
@@ -367,7 +348,7 @@ function BookingConfirmationContent() {
                         <span>
                           ₦
                           {(
-                            seat.price || state.selectedBus!.price
+                            seat.price || state.selectedTrip!.price
                           ).toLocaleString()}
                         </span>
                       </div>
@@ -384,7 +365,7 @@ function BookingConfirmationContent() {
                 </div>
               </div>
 
-              {/* Important Information - included in PDF */}
+              {/* Important Information */}
               <div className="mt-8 pt-8 border-t">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Important Information
@@ -434,7 +415,7 @@ function BookingConfirmationContent() {
           </Button>
           <Button
             onClick={handleNewBooking}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-primary hover:bg-blue-700"
           >
             Book Another Trip
           </Button>
@@ -460,7 +441,7 @@ export default function BookingConfirmation() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
         </div>
       }
     >

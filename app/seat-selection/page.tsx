@@ -14,16 +14,17 @@ import { useBooking } from "../../context/BookingContext";
 import { Seat } from "../../context/BookingContext";
 import { ArrowLeft, User, Crown, X } from "lucide-react";
 import { toast } from "sonner";
+import Image from "next/image";
 
 function SeatSelectionContent() {
   const router = useRouter();
   const { state, dispatch } = useBooking();
 
   useEffect(() => {
-    if (!state.selectedBus) {
+    if (!state.selectedTrip || !state.selectedBus) {
       router.push("/search-results");
     }
-  }, [state.selectedBus, router]);
+  }, [state.selectedTrip, state.selectedBus, router]);
 
   const handleSeatClick = (seat: Seat) => {
     if (!seat.isAvailable) return;
@@ -58,7 +59,7 @@ function SeatSelectionContent() {
     router.push("/passenger-info");
   };
 
-  if (!state.selectedBus) return null;
+  if (!state.selectedTrip || !state.selectedBus) return null;
 
   const renderSeat = (seat: Seat) => {
     const isSelected = state.selectedSeats.find((s) => s.id === seat.id);
@@ -75,7 +76,7 @@ function SeatSelectionContent() {
             !seat.isAvailable
               ? "bg-gray-200 border-gray-300 cursor-not-allowed"
               : isSelected
-              ? "bg-blue-600 border-blue-700 text-white scale-110 shadow-lg"
+              ? "bg-primary border-blue-700 text-white scale-110 shadow-lg"
               : isPremium
               ? "bg-yellow-50 border-yellow-300 hover:bg-yellow-100 hover:border-yellow-400"
               : "bg-green-50 border-green-300 hover:bg-green-100 hover:border-green-400"
@@ -170,12 +171,12 @@ function SeatSelectionContent() {
                 <span>Back to Results</span>
               </Button>
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold">T</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900">
-                  TravelEase
-                </span>
+                <Image
+                  src="/logo.png"
+                  alt="TravelEase Logo"
+                  width={128}
+                  height={128}
+                />
               </div>
             </div>
           </div>
@@ -220,7 +221,7 @@ function SeatSelectionContent() {
                       <span>Premium</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-blue-600 border-2 border-blue-700 rounded flex items-center justify-center">
+                      <div className="w-6 h-6 bg-primary border-2 border-blue-700 rounded flex items-center justify-center">
                         <User className="w-3 h-3 text-white" />
                       </div>
                       <span>Selected</span>
@@ -265,7 +266,7 @@ function SeatSelectionContent() {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Route:</span>
                       <span>
-                        {state.searchData.from} → {state.searchData.to}
+                        {state.selectedTrip.from} → {state.selectedTrip.to}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -276,7 +277,7 @@ function SeatSelectionContent() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Time:</span>
-                      <span>{state.selectedBus.departureTime}</span>
+                      <span>{state.selectedTrip.departureTime}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Passengers:</span>
@@ -305,7 +306,7 @@ function SeatSelectionContent() {
                             <span>
                               ₦
                               {(
-                                seat.price || state.selectedBus!.price
+                                seat.price || state.selectedTrip!.price
                               ).toLocaleString()}
                             </span>
                           </div>
@@ -328,7 +329,7 @@ function SeatSelectionContent() {
                 {/* Continue Button */}
                 <Button
                   onClick={handleContinue}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  className="w-full bg-primary hover:bg-blue-700"
                   disabled={
                     state.selectedSeats.length !== state.searchData.passengers
                   }
@@ -354,7 +355,7 @@ export default function SeatSelection() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
         </div>
       }
     >

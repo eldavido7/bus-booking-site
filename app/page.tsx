@@ -76,7 +76,7 @@ export default function HomePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="from" className="flex items-center space-x-2">
-                    <MapPin className="w-4 h-4 text-blue-600" />
+                    <MapPin className="w-4 h-4 text-primary" />
                     <span>From</span>
                   </Label>
                   <Select
@@ -175,7 +175,7 @@ export default function HomePage() {
                 <div className="flex items-end">
                   <Button
                     onClick={handleSearch}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6"
+                    className="w-full bg-primary hover:bg-blue-700 text-white py-6"
                   >
                     Search Buses
                   </Button>
@@ -200,7 +200,7 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center p-8 rounded-lg bg-blue-50">
-              <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
                 <Shield className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-semibold text-gray-900 mb-4">

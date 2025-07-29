@@ -18,6 +18,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import Image from "next/image";
 
 function PaymentContent() {
   const router = useRouter();
@@ -27,13 +28,20 @@ function PaymentContent() {
 
   useEffect(() => {
     if (
+      !state.selectedTrip ||
       !state.selectedBus ||
       state.selectedSeats.length === 0 ||
       state.passengers.length === 0
     ) {
       router.push("/passenger-info");
     }
-  }, [state, router]);
+  }, [
+    state.selectedTrip,
+    state.selectedBus,
+    state.selectedSeats,
+    state.passengers,
+    router,
+  ]);
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -68,6 +76,7 @@ function PaymentContent() {
   };
 
   if (
+    !state.selectedTrip ||
     !state.selectedBus ||
     state.selectedSeats.length === 0 ||
     state.passengers.length === 0
@@ -88,7 +97,7 @@ function PaymentContent() {
               Your booking has been confirmed. Redirecting to confirmation
               page...
             </p>
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           </CardContent>
         </Card>
       </div>
@@ -111,12 +120,12 @@ function PaymentContent() {
                 <span>Back to Passenger Info</span>
               </Button>
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold">T</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900">
-                  TravelEase
-                </span>
+                <Image
+                  src="/logo.png"
+                  alt="TravelEase Logo"
+                  width={128}
+                  height={128}
+                />
               </div>
             </div>
           </div>
@@ -177,7 +186,7 @@ function PaymentContent() {
                     <Button
                       onClick={handlePayment}
                       disabled={isProcessing}
-                      className="w-full bg-blue-600 hover:bg-blue-700 py-3"
+                      className="w-full bg-primary hover:bg-blue-700 py-3"
                     >
                       {isProcessing ? (
                         <div className="flex items-center space-x-2">
@@ -252,7 +261,7 @@ function PaymentContent() {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Route:</span>
                       <span>
-                        {state.searchData.from} → {state.searchData.to}
+                        {state.selectedTrip.from} → {state.selectedTrip.to}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -263,7 +272,7 @@ function PaymentContent() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Time:</span>
-                      <span>{state.selectedBus.departureTime}</span>
+                      <span>{state.selectedTrip.departureTime}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Bus:</span>
@@ -311,7 +320,7 @@ function PaymentContent() {
                         <span>
                           ₦
                           {(
-                            seat.price || state.selectedBus!.price
+                            seat.price || state.selectedTrip!.price
                           ).toLocaleString()}
                         </span>
                       </div>
@@ -340,7 +349,7 @@ export default function Payment() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
         </div>
       }
     >

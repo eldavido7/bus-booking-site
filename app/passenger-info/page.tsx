@@ -21,6 +21,7 @@ import {
 import { useBooking, Passenger } from "../../context/BookingContext";
 import { ArrowLeft, User, Mail, Phone, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import Image from "next/image";
 
 function PassengerInfoContent() {
   const router = useRouter();
@@ -28,7 +29,11 @@ function PassengerInfoContent() {
   const [passengers, setPassengers] = useState<Passenger[]>([]);
 
   useEffect(() => {
-    if (!state.selectedBus || state.selectedSeats.length === 0) {
+    if (
+      !state.selectedTrip ||
+      !state.selectedBus ||
+      state.selectedSeats.length === 0
+    ) {
       router.push("/seat-selection");
       return;
     }
@@ -39,14 +44,15 @@ function PassengerInfoContent() {
       (_, index) => ({
         firstName: "",
         lastName: "",
-        email: index === 0 ? "" : "", // Only require email for first passenger
-        phone: index === 0 ? "" : "", // Only require phone for first passenger
+        email: index === 0 ? "" : "",
+        phone: index === 0 ? "" : "",
         age: 25,
         gender: "male" as const,
       })
     );
     setPassengers(initialPassengers);
   }, [
+    state.selectedTrip,
     state.selectedBus,
     state.selectedSeats,
     state.searchData.passengers,
@@ -111,7 +117,12 @@ function PassengerInfoContent() {
     router.push("/payment");
   };
 
-  if (!state.selectedBus || state.selectedSeats.length === 0) return null;
+  if (
+    !state.selectedTrip ||
+    !state.selectedBus ||
+    state.selectedSeats.length === 0
+  )
+    return null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -129,12 +140,12 @@ function PassengerInfoContent() {
                 <span>Back to Seat Selection</span>
               </Button>
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold">T</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900">
-                  TravelEase
-                </span>
+                <Image
+                  src="/logo.png"
+                  alt="TravelEase Logo"
+                  width={128}
+                  height={128}
+                />
               </div>
             </div>
           </div>
@@ -160,7 +171,7 @@ function PassengerInfoContent() {
                     className="border border-gray-200 rounded-lg p-6"
                   >
                     <div className="flex items-center space-x-2 mb-4">
-                      <User className="w-5 h-5 text-blue-600" />
+                      <User className="w-5 h-5 text-primary" />
                       <h3 className="text-lg font-semibold">
                         Passenger {index + 1}{" "}
                         {index === 0 && "(Primary Contact)"}
@@ -308,7 +319,7 @@ function PassengerInfoContent() {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Route:</span>
                       <span>
-                        {state.searchData.from} → {state.searchData.to}
+                        {state.selectedTrip.from} → {state.selectedTrip.to}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -319,7 +330,7 @@ function PassengerInfoContent() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Time:</span>
-                      <span>{state.selectedBus.departureTime}</span>
+                      <span>{state.selectedTrip.departureTime}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Bus:</span>
@@ -334,7 +345,7 @@ function PassengerInfoContent() {
                     Selected Seats
                   </h4>
                   <div className="space-y-2">
-                    {state.selectedSeats.map((seat, index) => (
+                    {state.selectedSeats.map((seat) => (
                       <div
                         key={seat.id}
                         className="flex justify-between items-center text-sm"
@@ -343,7 +354,7 @@ function PassengerInfoContent() {
                         <span>
                           ₦
                           {(
-                            seat.price || state.selectedBus!.price
+                            seat.price || state.selectedTrip!.price
                           ).toLocaleString()}
                         </span>
                       </div>
@@ -362,7 +373,7 @@ function PassengerInfoContent() {
                 {/* Continue Button */}
                 <Button
                   onClick={handleContinue}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  className="w-full bg-primary hover:bg-blue-700"
                 >
                   Proceed to Payment
                 </Button>
@@ -385,7 +396,7 @@ export default function PassengerInfo() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
         </div>
       }
     >

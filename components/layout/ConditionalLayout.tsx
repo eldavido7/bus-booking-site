@@ -4,7 +4,13 @@ import { usePathname } from "next/navigation";
 import Header from "./Header";
 import Footer from "./Footer";
 
-const pagesWithLayout = ["/", "/trip-search", "/contact", "/about"];
+const pagesWithLayout = [
+  "/",
+  "/trip-search",
+  "/contact",
+  "/about",
+  "/booking-confirmation",
+];
 
 export default function ConditionalLayout({
   children,
