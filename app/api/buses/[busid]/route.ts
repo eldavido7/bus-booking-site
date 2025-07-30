@@ -9,15 +9,17 @@ type BusWithSeats = Prisma.BusGetPayload<{
     include: { seats: true };
 }>;
 
-export async function GET(request: NextRequest, { params }: { params: { busId: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ busId: string }> }) {
     try {
+        const { busId } = await params;
+
         const authResult = await verifyAdmin(request);
         if (!authResult.success) {
             return authResult.error;
         }
 
         const bus = await prisma.bus.findUnique({
-            where: { id: params.busId },
+            where: { id: busId },
             include: { seats: true },
         });
 
@@ -52,8 +54,10 @@ export async function GET(request: NextRequest, { params }: { params: { busId: s
     }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { busId: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ busId: string }> }) {
     try {
+        const { busId } = await params;
+
         const authResult = await verifyAdmin(request);
         if (!authResult.success) {
             return authResult.error;
@@ -65,7 +69,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { busId:
 
 
         const bus = await prisma.bus.findUnique({
-            where: { id: params.busId },
+            where: { id: busId },
             include: { seats: true },
         });
         if (!bus) {
@@ -74,7 +78,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { busId:
                 { status: 404 }
             );
         }
-
 
         if (busType) {
             const busTypeExists = await prisma.busType.findUnique({
@@ -87,7 +90,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { busId:
                 );
             }
         }
-
 
         let seatNumbers: string[] = [];
         let seatLayoutJson: JsonValue | undefined;
@@ -105,7 +107,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { busId:
                     { status: 400 }
                 );
             }
-
 
             const busTypeRecord = await prisma.busType.findUnique({
                 where: { name: busType || bus.busType },
@@ -129,7 +130,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { busId:
                     { status: 400 }
                 );
             }
-
 
             seatLayoutJson = { rows, columns, arrangement };
         }
@@ -157,7 +157,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { busId:
         }
 
         const updatedBus: BusWithSeats = await prisma.bus.update({
-            where: { id: params.busId },
+            where: { id: busId },
             data: dataToUpdate,
             include: { seats: true },
         });
@@ -176,7 +176,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { busId:
             rating: updatedBus.rating,
         });
     } catch (error) {
-
         console.error('Update bus error:', error);
         return NextResponse.json(
             { error: { code: 500, message: 'Internal server error' } },
@@ -187,15 +186,17 @@ export async function PATCH(request: NextRequest, { params }: { params: { busId:
     }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { busId: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ busId: string }> }) {
     try {
+        const { busId } = await params;
+
         const authResult = await verifyAdmin(request);
         if (!authResult.success) {
             return authResult.error;
         }
 
         const bus = await prisma.bus.findUnique({
-            where: { id: params.busId },
+            where: { id: busId },
         });
         if (!bus) {
             return NextResponse.json(
@@ -205,10 +206,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { busId
         }
 
         const activeTrips = await prisma.trip.count({
-            where: { busId: params.busId, isAvailable: true },
+            where: { busId, isAvailable: true },
         });
         const activeBookings = await prisma.booking.count({
-            where: { busId: params.busId, status: { in: ['confirmed', 'completed'] } },
+            where: { busId, status: { in: ['confirmed', 'completed'] } },
         });
 
         if (activeTrips > 0 || activeBookings > 0) {
@@ -219,7 +220,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { busId
         }
 
         await prisma.bus.delete({
-            where: { id: params.busId },
+            where: { id: busId },
         });
 
         return NextResponse.json({ message: 'Bus deleted' });

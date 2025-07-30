@@ -3,8 +3,10 @@ import prisma from '../../../../lib/prisma';
 import { verifyAdmin, disconnectPrisma } from '../../../../lib/auth';
 import { BusTypeInput } from '../../../../lib/types';
 
-export async function PATCH(request: NextRequest, { params }: { params: { busTypeId: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ busTypeId: string }> }) {
     try {
+        const { busTypeId } = await params;
+
         const authResult = await verifyAdmin(request);
         if (!authResult.success) {
             return authResult.error;
@@ -15,7 +17,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { busTyp
         const { name, seats } = body;
 
         const busType = await prisma.busType.findUnique({
-            where: { id: params.busTypeId },
+            where: { id: busTypeId },
         });
         if (!busType) {
             return NextResponse.json(
@@ -44,7 +46,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { busTyp
         }
 
         const updatedBusType = await prisma.busType.update({
-            where: { id: params.busTypeId },
+            where: { id: busTypeId },
             data: {
                 name: name || busType.name,
                 seats: seats !== undefined ? seats : busType.seats,

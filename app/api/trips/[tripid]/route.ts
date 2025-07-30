@@ -46,15 +46,17 @@ type TripWithBus = Prisma.TripGetPayload<{
     include: { bus: { include: { seats: true } } };
 }>;
 
-export async function GET(request: NextRequest, { params }: { params: { tripId: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ tripId: string }> }) {
     try {
+        const { tripId } = await params;
+
         const authResult = await verifyAdmin(request);
         if (!authResult.success) {
             return authResult.error;
         }
 
         const trip = await prisma.trip.findUnique({
-            where: { id: params.tripId },
+            where: { id: tripId },
             include: { bus: { include: { seats: true } } },
         });
 
@@ -113,8 +115,10 @@ export async function GET(request: NextRequest, { params }: { params: { tripId: 
     }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { tripId: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ tripId: string }> }) {
     try {
+        const { tripId } = await params;
+
         const authResult = await verifyAdmin(request);
         if (!authResult.success) {
             return authResult.error;
@@ -126,7 +130,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { tripId
 
         // Validate trip exists
         const trip = await prisma.trip.findUnique({
-            where: { id: params.tripId },
+            where: { id: tripId },
             include: { bus: { include: { seats: true } } },
         });
         if (!trip) {
@@ -194,7 +198,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { tripId
             const checkDate = date || trip.date.toISOString().split('T')[0];
             const checkDepartureTime = departureTime || trip.departureTime;
             const checkDuration = duration || trip.duration;
-            if (await hasOverlappingTrip(params.tripId, checkBusId, checkDate, checkDepartureTime, checkDuration)) {
+            if (await hasOverlappingTrip(tripId, checkBusId, checkDate, checkDepartureTime, checkDuration)) {
                 return NextResponse.json(
                     { error: { code: 400, message: 'Trip overlaps with an existing trip for this bus' } },
                     { status: 400 }
@@ -203,7 +207,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { tripId
         }
 
         const updatedTrip: TripWithBus = await prisma.trip.update({
-            where: { id: params.tripId },
+            where: { id: tripId },
             data: {
                 busId: busId || undefined,
                 from: from || undefined,
@@ -267,8 +271,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { tripId
     }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { tripId: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ tripId: string }> }) {
     try {
+        const { tripId } = await params;
+
         const authResult = await verifyAdmin(request);
         if (!authResult.success) {
             return authResult.error;
@@ -276,7 +282,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { tripI
 
         // Check if trip exists
         const trip = await prisma.trip.findUnique({
-            where: { id: params.tripId },
+            where: { id: tripId },
         });
         if (!trip) {
             return NextResponse.json(
@@ -287,7 +293,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { tripI
 
         // Check for active bookings
         const activeBookings = await prisma.booking.count({
-            where: { tripId: params.tripId, status: { in: ['confirmed', 'completed'] } },
+            where: { tripId, status: { in: ['confirmed', 'completed'] } },
         });
         if (activeBookings > 0) {
             return NextResponse.json(
@@ -297,7 +303,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { tripI
         }
 
         await prisma.trip.delete({
-            where: { id: params.tripId },
+            where: { id: tripId },
         });
 
         return NextResponse.json({ message: 'Trip deleted' });
