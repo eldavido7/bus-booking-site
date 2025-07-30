@@ -69,3 +69,50 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         await disconnectPrisma();
     }
 }
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ busTypeId: string }> }) {
+    try {
+        const { busTypeId } = await params;
+
+        const authResult = await verifyAdmin(request);
+        if (!authResult.success) {
+            return authResult.error;
+        }
+
+        const busType = await prisma.busType.findUnique({
+            where: { id: busTypeId },
+        });
+        if (!busType) {
+            return NextResponse.json(
+                { error: { code: 404, message: 'Bus type not found' } },
+                { status: 404 }
+            );
+        }
+
+        // Check if bus type is being used by any buses
+        const busesUsingType = await prisma.bus.count({
+            where: { busType: busType.name },
+        });
+
+        if (busesUsingType > 0) {
+            return NextResponse.json(
+                { error: { code: 409, message: 'Cannot delete bus type that is being used by existing buses' } },
+                { status: 409 }
+            );
+        }
+
+        await prisma.busType.delete({
+            where: { id: busTypeId },
+        });
+
+        return NextResponse.json({ message: 'Bus type deleted' });
+    } catch (error) {
+        console.error('Delete bus type error:', error);
+        return NextResponse.json(
+            { error: { code: 500, message: 'Internal server error' } },
+            { status: 500 }
+        );
+    } finally {
+        await disconnectPrisma();
+    }
+}
