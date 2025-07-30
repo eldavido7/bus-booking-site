@@ -16,10 +16,12 @@ type BookingWithDetails = Prisma.BookingGetPayload<{
     };
 }>;
 
-export async function GET(request: NextRequest, { params }: { params: { reference: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
     try {
+        const { reference } = await params;
+
         const booking = await prisma.booking.findUnique({
-            where: { reference: params.reference },
+            where: { reference },
             include: {
                 trip: { include: { bus: { include: { seats: true } } } },
                 passengers: true,
@@ -87,8 +89,10 @@ export async function GET(request: NextRequest, { params }: { params: { referenc
     }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { reference: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
     try {
+        const { reference } = await params;
+
         const authResult = await verifyAdmin(request);
         if (!authResult.success) {
             return authResult.error;
@@ -99,7 +103,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { refere
         const { status, email, phone, paymentReference } = body;
 
         const booking = await prisma.booking.findUnique({
-            where: { reference: params.reference },
+            where: { reference },
             include: { trip: true },
         });
         if (!booking) {
@@ -119,14 +123,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { refere
         }
 
         if (paymentReference) {
-            const existingBooking = await prisma.booking.findFirst({ where: { paymentReference, NOT: { reference: params.reference } } });
+            const existingBooking = await prisma.booking.findFirst({ where: { paymentReference, NOT: { reference } } });
             if (existingBooking) {
                 return NextResponse.json({ error: { code: 400, message: 'Payment reference already used' } }, { status: 400 });
             }
         }
 
         const updatedBooking: BookingWithDetails = await prisma.booking.update({
-            where: { reference: params.reference },
+            where: { reference },
             data: {
                 status: status || undefined,
                 email: email || undefined,
@@ -197,15 +201,17 @@ export async function PATCH(request: NextRequest, { params }: { params: { refere
     }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { reference: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
     try {
+        const { reference } = await params;
+
         const authResult = await verifyAdmin(request);
         if (!authResult.success) {
             return authResult.error;
         }
 
         const booking = await prisma.booking.findUnique({
-            where: { reference: params.reference },
+            where: { reference },
         });
         if (!booking) {
             return NextResponse.json({ error: { code: 404, message: 'Booking not found' } }, { status: 404 });
@@ -216,10 +222,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { refer
         }
 
         await prisma.$transaction(async (tx) => {
-            await tx.passenger.deleteMany({ where: { bookingId: params.reference } });
-            const seatNumbers = (await tx.passenger.findMany({ where: { bookingId: params.reference }, select: { seat: true } })).map((p) => p.seat);
+            await tx.passenger.deleteMany({ where: { bookingId: reference } });
+            const seatNumbers = (await tx.passenger.findMany({ where: { bookingId: reference }, select: { seat: true } })).map((p) => p.seat);
             await tx.seat.updateMany({ where: { busId: booking.busId, number: { in: seatNumbers } }, data: { isAvailable: true } });
-            await tx.booking.delete({ where: { reference: params.reference } });
+            await tx.booking.delete({ where: { reference } });
         });
 
         return NextResponse.json({ message: 'Booking deleted' });
