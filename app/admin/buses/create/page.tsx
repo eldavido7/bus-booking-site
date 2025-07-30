@@ -26,8 +26,8 @@ import {
   useBusTypes,
   Bus as Buss,
 } from "../../../../context/BookingContext";
-// import { mockRoutes } from "../../../../lib/mockData";
 import Image from "next/image";
+import ProtectedRoute from "../../../../components/ProtectedRoute";
 
 export default function CreateBus() {
   const router = useRouter();
@@ -92,17 +92,6 @@ export default function CreateBus() {
     return seats;
   };
 
-  // const calculateDuration = (departure: string, arrival: string) => {
-  //   if (!departure || !arrival) return "0h 0m";
-  //   const [depHour, depMin] = departure.split(":").map(Number);
-  //   const [arrHour, arrMin] = arrival.split(":").map(Number);
-  //   let totalMinutes = arrHour * 60 + arrMin - (depHour * 60 + depMin);
-  //   if (totalMinutes < 0) totalMinutes += 24 * 60;
-  //   const hours = Math.floor(totalMinutes / 60);
-  //   const minutes = totalMinutes % 60;
-  //   return `${hours}h ${minutes}m`;
-  // };
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -120,10 +109,6 @@ export default function CreateBus() {
         : prev.amenities.filter((a) => a !== amenity),
     }));
   };
-
-  // const handleCheckboxChange = (name: string, checked: boolean) => {
-  //   setFormData((prev) => ({ ...prev, [name]: checked }));
-  // };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,195 +149,200 @@ export default function CreateBus() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                onClick={() => router.push("/admin")}
-                className="flex items-center space-x-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back to Dashboard</span>
-              </Button>
-              <div className="flex items-center space-x-2">
-                <Image
-                  src="/logo.png"
-                  alt="TravelEase Logo"
-                  width={128}
-                  height={128}
-                />
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => router.push("/admin")}
+                  className="flex items-center space-x-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back to Dashboard</span>
+                </Button>
+                <div className="flex items-center space-x-2">
+                  <Image
+                    src="/logo.png"
+                    alt="TravelEase Logo"
+                    width={128}
+                    height={128}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </header>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Bus className="w-6 h-6 text-primary" />
-              <span>Create New Bus</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-8">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Basic Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="operator">
-                      Bus Operator <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="operator"
-                      name="operator"
-                      value={formData.operator}
-                      onChange={handleInputChange}
-                      placeholder="e.g., GIG Express"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="busType">Bus Type</Label>
-                    <Select
-                      value={formData.busType}
-                      onValueChange={(value) =>
-                        handleSelectChange("busType", value)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {busTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.name}>
-                            {type.name} ({type.seats} seats)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="rating">Rating</Label>
-                    <Select
-                      value={formData.rating}
-                      onValueChange={(value) =>
-                        handleSelectChange("rating", value)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[
-                          "3.0",
-                          "3.5",
-                          "4.0",
-                          "4.2",
-                          "4.5",
-                          "4.7",
-                          "4.8",
-                          "5.0",
-                        ].map((r) => (
-                          <SelectItem key={r} value={r}>
-                            {r}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Amenities
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {availableAmenities.map((amenity) => (
-                    <div key={amenity} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={amenity}
-                        checked={formData.amenities.includes(amenity)}
-                        onCheckedChange={(checked) =>
-                          handleAmenityChange(amenity, checked as boolean)
-                        }
-                      />
-                      <Label htmlFor={amenity} className="text-sm">
-                        {amenity}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {formData.operator && (
+        </header>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Bus className="w-6 h-6 text-primary" />
+                <span>Create New Bus</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-8">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Preview
+                    Basic Information
                   </h3>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-semibold">{formData.operator}</h4>
-                        <p className="text-sm text-gray-600">
-                          {formData.busType} •{" "}
-                          {
-                            busTypes.find((t) => t.name === formData.busType)
-                              ?.seats
-                          }{" "}
-                          seats
-                        </p>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="operator">
+                        Bus Operator <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="operator"
+                        name="operator"
+                        value={formData.operator}
+                        onChange={handleInputChange}
+                        placeholder="e.g., GIG Express"
+                        required
+                      />
                     </div>
-                    {formData.amenities.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {formData.amenities.map((amenity) => (
-                          <span
-                            key={amenity}
-                            className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
-                          >
-                            {amenity}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="busType">Bus Type</Label>
+                      <Select
+                        value={formData.busType}
+                        onValueChange={(value) =>
+                          handleSelectChange("busType", value)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {busTypes.map((type) => (
+                            <SelectItem key={type.id} value={type.name}>
+                              {type.name} ({type.seats} seats)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="rating">Rating</Label>
+                      <Select
+                        value={formData.rating}
+                        onValueChange={(value) =>
+                          handleSelectChange("rating", value)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[
+                            "3.0",
+                            "3.5",
+                            "4.0",
+                            "4.2",
+                            "4.5",
+                            "4.7",
+                            "4.8",
+                            "5.0",
+                          ].map((r) => (
+                            <SelectItem key={r} value={r}>
+                              {r}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
-              )}
-              <div className="flex justify-end space-x-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push("/admin")}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="bg-primary hover:bg-blue-700"
-                >
-                  {isLoading ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Creating...</span>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Amenities
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {availableAmenities.map((amenity) => (
+                      <div
+                        key={amenity}
+                        className="flex items-center space-x-2"
+                      >
+                        <Checkbox
+                          id={amenity}
+                          checked={formData.amenities.includes(amenity)}
+                          onCheckedChange={(checked) =>
+                            handleAmenityChange(amenity, checked as boolean)
+                          }
+                        />
+                        <Label htmlFor={amenity} className="text-sm">
+                          {amenity}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {formData.operator && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Preview
+                    </h3>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold">{formData.operator}</h4>
+                          <p className="text-sm text-gray-600">
+                            {formData.busType} •{" "}
+                            {
+                              busTypes.find((t) => t.name === formData.busType)
+                                ?.seats
+                            }{" "}
+                            seats
+                          </p>
+                        </div>
+                      </div>
+                      {formData.amenities.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {formData.amenities.map((amenity) => (
+                            <span
+                              key={amenity}
+                              className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
+                            >
+                              {amenity}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="flex items-center space-x-2">
-                      <Save className="w-4 h-4" />
-                      <span>Create Bus</span>
-                    </div>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+                  </div>
+                )}
+                <div className="flex justify-end space-x-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push("/admin")}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="bg-primary hover:bg-blue-700"
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Creating...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <Save className="w-4 h-4" />
+                        <span>Create Bus</span>
+                      </div>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
+    "@prisma/client": "^6.13.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
     "@radix-ui/react-aspect-ratio": "^1.1.0",
@@ -38,9 +39,11 @@
     "@radix-ui/react-toggle-group": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.1.2",
     "@react-pdf/renderer": "^4.3.0",
+    "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "latest",
+    "crypto": "^1.0.1",
     "date-fns": "latest",
     "embla-carousel-react": "^8.3.0",
     "html2canvas": "^1.4.1",
@@ -49,6 +52,7 @@
     "lucide-react": "latest",
     "next": "15.4.4",
     "next-themes": "latest",
+    "prisma": "^6.13.0",
     "react": "19.0.0",
     "react-day-picker": "latest",
     "react-dom": "19.0.0",
@@ -58,10 +62,13 @@
     "sonner": "latest",
     "tailwind-merge": "latest",
     "tailwindcss-animate": "latest",
+    "uuid": "^11.1.0",
     "vaul": "latest",
-    "zod": "latest"
+    "zod": "latest",
+    "zustand": "^5.0.6"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",

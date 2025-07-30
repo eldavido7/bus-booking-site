@@ -14,6 +14,7 @@ import {
 import { ArrowLeft, User, Save, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
+import ProtectedRoute from "../../../../components/ProtectedRoute";
 
 export default function CreateUser() {
   const router = useRouter();
@@ -120,213 +121,215 @@ export default function CreateUser() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                onClick={() => router.push("/admin")}
-                className="flex items-center space-x-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back to Dashboard</span>
-              </Button>
-              <div className="flex items-center space-x-2">
-                <Image
-                  src="/logo.png"
-                  alt="TravelEase Logo"
-                  width={128}
-                  height={128}
-                />
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => router.push("/admin")}
+                  className="flex items-center space-x-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back to Dashboard</span>
+                </Button>
+                <div className="flex items-center space-x-2">
+                  <Image
+                    src="/logo.png"
+                    alt="TravelEase Logo"
+                    width={128}
+                    height={128}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <User className="w-6 h-6 text-primary" />
-              <span>Create New User</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Personal Information */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Personal Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">
-                      First Name <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="firstName"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      placeholder="Enter first name"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">
-                      Last Name <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="lastName"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      placeholder="Enter last name"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">
-                      Email Address <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      placeholder="Enter email address"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="e.g., +2348012345678"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Account Information */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Account Information
-                </h3>
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="password">
-                      Password <span className="text-red-500">*</span>
-                    </Label>
-                    <div className="flex space-x-2">
-                      <div className="relative flex-1">
-                        <Input
-                          id="password"
-                          name="password"
-                          type={showPassword ? "text" : "password"}
-                          value={formData.password}
-                          onChange={handleInputChange}
-                          placeholder="Enter password"
-                          required
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-400" />
-                          ) : (
-                            <Eye className="h-4 w-4 text-gray-400" />
-                          )}
-                        </Button>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={generatePassword}
-                      >
-                        Generate
-                      </Button>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Password must be at least 8 characters long
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Preview */}
-              {formData.firstName && formData.lastName && formData.email && (
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <User className="w-6 h-6 text-primary" />
+                <span>Create New User</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Personal Information */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Preview
+                    Personal Information
                   </h3>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <User className="w-6 h-6 text-primary" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold">
-                          {formData.firstName} {formData.lastName}
-                        </h4>
-                        <p className="text-sm text-gray-600">
-                          {formData.email}
-                        </p>
-                        <p className="text-sm text-gray-600 capitalize">
-                          {formData.role}
-                        </p>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">
+                        First Name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="firstName"
+                        name="firstName"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        placeholder="Enter first name"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">
+                        Last Name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="lastName"
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        placeholder="Enter last name"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email">
+                        Email Address <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        placeholder="Enter email address"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        placeholder="e.g., +2348012345678"
+                      />
                     </div>
                   </div>
                 </div>
-              )}
 
-              {/* Submit Button */}
-              <div className="flex justify-end space-x-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push("/admin")}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="bg-primary hover:bg-blue-700"
-                >
-                  {isLoading ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Creating...</span>
+                {/* Account Information */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Account Information
+                  </h3>
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="password">
+                        Password <span className="text-red-500">*</span>
+                      </Label>
+                      <div className="flex space-x-2">
+                        <div className="relative flex-1">
+                          <Input
+                            id="password"
+                            name="password"
+                            type={showPassword ? "text" : "password"}
+                            value={formData.password}
+                            onChange={handleInputChange}
+                            placeholder="Enter password"
+                            required
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4 text-gray-400" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-gray-400" />
+                            )}
+                          </Button>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={generatePassword}
+                        >
+                          Generate
+                        </Button>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        Password must be at least 8 characters long
+                      </p>
                     </div>
-                  ) : (
-                    <div className="flex items-center space-x-2">
-                      <Save className="w-4 h-4" />
-                      <span>Create User</span>
+                  </div>
+                </div>
+
+                {/* Preview */}
+                {formData.firstName && formData.lastName && formData.email && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Preview
+                    </h3>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                          <User className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold">
+                            {formData.firstName} {formData.lastName}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {formData.email}
+                          </p>
+                          <p className="text-sm text-gray-600 capitalize">
+                            {formData.role}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                <div className="flex justify-end space-x-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push("/admin")}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="bg-primary hover:bg-blue-700"
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Creating...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <Save className="w-4 h-4" />
+                        <span>Create User</span>
+                      </div>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

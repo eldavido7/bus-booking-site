@@ -14,7 +14,7 @@ import {
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
-import { mockUsers } from "../../../lib/mockData";
+import { useAuthStore } from "../../../lib/store/authStore"; // make sure path is correct
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -41,27 +41,31 @@ export default function AdminLogin() {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Find a user in the mockUsers array that matches the form data
-      const foundUser = mockUsers.find(
-        (user) =>
-          user.email === formData.email && user.password === formData.password
-      );
-
-      if (foundUser) {
-        // Store admin session (in real app, use proper JWT/session management)
-        localStorage.setItem("adminAuth", "true");
-        toast.success("Login successful!");
-        router.push("/admin");
-      } else {
-        toast.error("Invalid email or password");
-      }
-    } catch (error: unknown) {
-      toast.error("Login failed. Please try again.", {
-        description: (error as Error).message,
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error?.message || "Login failed");
+      }
+
+      await useAuthStore.getState().login(data.token);
+      toast.success("Login successful!");
+      router.push("/admin");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error("Login failed", {
+          description: error.message,
+        });
+      } else {
+        toast.error("Login failed", {
+          description: "An unknown error occurred",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
