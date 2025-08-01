@@ -140,7 +140,10 @@ export default function CreateTrip() {
   };
 
   const isTripConflict = (
-    newTrip: Omit<Trip, "id" | "createdAt" | "bus" | "duration"> & {
+    newTrip: Omit<
+      Trip,
+      "id" | "createdAt" | "bus" | "duration" | "createdBy" | "modifiedBy"
+    > & {
       date: string | Date;
     }
   ) => {
@@ -227,13 +230,16 @@ export default function CreateTrip() {
       // Convert date string to proper ISO 8601 format
       const tripDate = new Date(formData.date + "T00:00:00.000Z");
 
-      const newTripData: Omit<Trip, "id" | "createdAt" | "bus" | "duration"> & {
+      const newTripData: Omit<
+        Trip,
+        "id" | "createdAt" | "bus" | "duration" | "createdBy" | "modifiedBy"
+      > & {
         date: string | Date;
       } = {
         busId: formData.busId,
         from: formData.from,
         to: formData.to,
-        date: tripDate.toISOString(), // This will be in proper ISO 8601 format
+        date: new Date(formData.date), // Convert form string to Date object
         departureTime: formData.departureTime,
         arrivalTime: formData.arrivalTime,
         price: parseInt(formData.price),

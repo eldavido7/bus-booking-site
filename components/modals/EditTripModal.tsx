@@ -237,7 +237,7 @@ export default function EditTripModal({
         busId: formData.busId,
         from: formData.from,
         to: formData.to,
-        date: formData.date, // Keep as string in YYYY-MM-DD format
+        date: new Date(formData.date), // Convert string to Date object
         departureTime: formData.departureTime,
         arrivalTime: formData.arrivalTime,
         duration: calculateDuration(
