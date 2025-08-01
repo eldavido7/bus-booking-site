@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "../ui/button";
 import {
   Dialog,
@@ -7,15 +8,13 @@ import {
   DialogDescription,
   DialogFooter,
 } from "../ui/dialog";
-// import { Bus } from "../../context/BookingContext";
-import { mockTrips } from "../../lib/mockData";
-import { toast } from "sonner";
 
 interface DeleteBusModalProps {
   bus: { id: string; operator: string };
   isOpen: boolean;
   onClose: () => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void>; // Expect an async function
+  isLoading: boolean; // <-- Receive loading state
 }
 
 export default function DeleteBusModal({
@@ -23,15 +22,12 @@ export default function DeleteBusModal({
   isOpen,
   onClose,
   onDelete,
+  isLoading, // <-- Use the prop directly
 }: DeleteBusModalProps) {
-  const handleDelete = () => {
-    if (mockTrips.some((t) => t.busId === bus.id)) {
-      toast.error("Cannot delete bus with assigned trips. Delete trips first.");
-      return;
-    }
-    onDelete(bus.id);
-    onClose();
+  const handleDelete = async () => {
+    await onDelete(bus.id);
   };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
@@ -43,11 +39,21 @@ export default function DeleteBusModal({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isLoading}
+          >
             Cancel
           </Button>
-          <Button type="button" variant="destructive" onClick={handleDelete}>
-            Delete
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={isLoading}
+          >
+            {isLoading ? "Deleting..." : "Delete"}
           </Button>
         </DialogFooter>
       </DialogContent>

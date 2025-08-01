@@ -1,46 +1,52 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "../../../../components/ui/button";
-import { Input } from "../../../../components/ui/input";
-import { Label } from "../../../../components/ui/label";
+import { useRouter, useParams } from "next/navigation";
+import { Button } from "../../../../../components/ui/button";
+import { Input } from "../../../../../components/ui/input";
+import { Label } from "../../../../../components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../../components/ui/select";
-import { Checkbox } from "../../../../components/ui/checkbox";
+} from "../../../../../components/ui/select";
+import { Checkbox } from "../../../../../components/ui/checkbox";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../../../../components/ui/card";
+} from "../../../../../components/ui/card";
 import { ArrowLeft, Bus, Save } from "lucide-react";
 import { toast } from "sonner";
-import { useBusStore, useBusTypeStore } from "../../../../lib/store/store";
-import { Bus as Buss, Seat, SeatLayoutJson } from "../../../../shared/types";
+import { useBusStore, useBusTypeStore } from "../../../../../lib/store/store";
+import { Bus as Buss, Seat, SeatLayoutJson } from "../../../../../shared/types";
 import Image from "next/image";
-import ProtectedRoute from "../../../../components/ProtectedRoute";
-import BusLayoutBuilder from "../../../../components/ui/BusLayoutBuilder"; // Import the new component
+import ProtectedRoute from "../../../../../components/ProtectedRoute";
+import BusLayoutBuilder from "../../../../../components/ui/BusLayoutBuilder";
 
-export default function CreateBus() {
+export default function EditBus() {
   const router = useRouter();
+  const { busId } = useParams();
+  const {
+    currentBus,
+    clearCurrentBus,
+    fetchBus,
+    updateBus,
+    error: busError,
+  } = useBusStore();
   const {
     busTypes,
     fetchBusTypes,
     isLoading: busTypeLoading,
   } = useBusTypeStore();
-  const { createBus } = useBusStore();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFormDataInitialized, setIsFormDataInitialized] = useState(false);
   const [formData, setFormData] = useState<
-    Partial<Buss> & {
-      seatCount?: number;
-    }
+    Partial<Buss> & { seatCount?: number }
   >({
     operator: "",
     busType: "",
@@ -62,47 +68,128 @@ export default function CreateBus() {
     "Blanket",
   ];
 
+  // Dynamically generate rating options (0.0 to 5.0, step 0.1)
+  const generateRatingOptions = () => {
+    const options: string[] = [];
+    for (let i = 0.0; i <= 5.0; i += 0.1) {
+      options.push(i.toFixed(1));
+    }
+    return options;
+  };
+
   useEffect(() => {
+    // Auth check and fetch bus types early
     const adminAuth = localStorage.getItem("adminAuth");
     if (!adminAuth) {
       router.push("/admin/login");
     } else {
       setIsAuthenticated(true);
-    }
-    if (busTypes.length === 0 && !busTypeLoading) {
-      fetchBusTypes();
+      if (busTypes.length === 0 && !busTypeLoading) {
+        fetchBusTypes();
+      }
     }
   }, [router, busTypes.length, busTypeLoading, fetchBusTypes]);
 
+  useEffect(() => {
+    // Clear and fetch bus when busId changes
+    if (!isAuthenticated || !busId) return;
+    clearCurrentBus();
+    fetchBus(busId as string);
+  }, [busId, isAuthenticated, clearCurrentBus, fetchBus]);
+
+  useEffect(() => {
+    // Only proceed if we have both currentBus and busTypes loaded, and we haven't initialized the form yet
+    if (
+      !currentBus ||
+      busTypes.length === 0 ||
+      busTypeLoading ||
+      isFormDataInitialized
+    )
+      return;
+
+    // Find the matching bus type - use exact match first, then case-insensitive
+    let matchingBusType = busTypes.find((t) => t.name === currentBus.busType);
+    if (!matchingBusType) {
+      matchingBusType = busTypes.find(
+        (t) => t.name.toLowerCase() === (currentBus.busType || "").toLowerCase()
+      );
+    }
+
+    if (!matchingBusType && currentBus.busType) {
+      toast.warning(
+        `Bus type "${currentBus.busType}" is not recognized. Please select a valid bus type.`
+      );
+    }
+
+    // Ensure rating is a valid number, fallback to 4.0 if invalid
+    const rating =
+      typeof currentBus.rating === "number" && !isNaN(currentBus.rating)
+        ? Math.max(0, Math.min(5, currentBus.rating)) // Clamp between 0 and 5
+        : 4.0;
+
+    // Use the exact busType name from the busTypes array if found, otherwise use the original
+    const busTypeToUse = matchingBusType
+      ? matchingBusType.name
+      : currentBus.busType || "";
+
+    const newFormData = {
+      operator: currentBus.operator || "",
+      busType: busTypeToUse,
+      rating,
+      amenities: Array.isArray(currentBus.amenities)
+        ? currentBus.amenities
+        : [],
+      seats: currentBus.seats.map((seat) => ({
+        ...seat,
+        isSelected: false,
+        type: "regular" as const, // Ensure type is set
+      })),
+      seatLayout: currentBus.seatLayout || {
+        rows: 0,
+        columns: 0,
+        arrangement: [],
+      },
+      seatCount: matchingBusType
+        ? matchingBusType.seats
+        : currentBus.seats.length,
+    };
+
+    setFormData(newFormData);
+    setIsFormDataInitialized(true);
+  }, [currentBus, busTypes, busTypeLoading, isFormDataInitialized]);
+
+  useEffect(() => {
+    if (busError) {
+      toast.error("Failed to load bus data", { description: busError });
+    }
+  }, [busError]);
+
+  useEffect(() => {
+    return () => {
+      clearCurrentBus();
+    };
+  }, [clearCurrentBus]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (name: string, value: string | number) => {
+  const handleSelectChange = (name: string, value: string) => {
     if (name === "busType") {
       const type = busTypes.find((t) => t.name === value);
       setFormData((prev) => ({
         ...prev,
-        busType: value as string,
-        seatCount: type ? type.seats : 0,
-        // Reset seats and layout when bus type changes
+        busType: value,
+        seatCount: type ? type.seats : prev.seatCount,
         seats: [],
         seatLayout: { rows: 0, columns: 0, arrangement: [] },
       }));
     } else if (name === "rating") {
-      setFormData((prev) => ({
-        ...prev,
-        rating: parseFloat(value as string),
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      const parsedRating = parseFloat(value);
+      if (!isNaN(parsedRating)) {
+        setFormData((prev) => ({ ...prev, rating: parsedRating }));
+      }
     }
   };
 
@@ -116,17 +203,12 @@ export default function CreateBus() {
   };
 
   const handleLayoutChange = (seats: Seat[], seatLayout: SeatLayoutJson) => {
-    setFormData((prev) => ({
-      ...prev,
-      seats,
-      seatLayout,
-    }));
+    setFormData((prev) => ({ ...prev, seats, seatLayout }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
     if (!formData.operator) {
       toast.error("Please fill in the operator field");
       return;
@@ -134,6 +216,13 @@ export default function CreateBus() {
 
     if (!formData.busType) {
       toast.error("Please select a bus type");
+      return;
+    }
+
+    if (!busTypes.find((t) => t.name === formData.busType)) {
+      toast.error(
+        "Selected bus type is not valid. Please choose from the available options."
+      );
       return;
     }
 
@@ -156,21 +245,21 @@ export default function CreateBus() {
 
     setIsLoading(true);
     try {
-      await createBus({
-        operator: formData.operator,
-        busType: formData.busType,
+      await updateBus(busId as string, {
+        operator: formData.operator || "",
+        busType: formData.busType || "",
         seatLayout: formData.seatLayout || {
           rows: 0,
           columns: 0,
           arrangement: [],
         },
         amenities: formData.amenities || [],
-        rating: Number(formData.rating) || 4.0,
+        rating: formData.rating || 4.0,
       });
-      toast.success("Bus created successfully!");
+      toast.success("Bus updated successfully!");
       router.push("/admin/buses");
     } catch (error: unknown) {
-      toast.error("Failed to create bus", {
+      toast.error("Failed to update bus", {
         description: (error as Error).message,
       });
     } finally {
@@ -178,7 +267,7 @@ export default function CreateBus() {
     }
   };
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !currentBus || busTypeLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
@@ -219,12 +308,11 @@ export default function CreateBus() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Bus className="w-6 h-6 text-primary" />
-                <span>Create New Bus</span>
+                <span>Edit Bus</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-8">
-                {/* Basic Information */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
                     Basic Information
@@ -243,13 +331,13 @@ export default function CreateBus() {
                         required
                       />
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="busType">
                         Bus Type <span className="text-red-500">*</span>
                       </Label>
                       <Select
-                        value={formData.busType || ""}
+                        key={`bustype-${formData.busType}-${busTypes.length}`}
+                        value={formData.busType || undefined}
                         onValueChange={(value) =>
                           handleSelectChange("busType", value)
                         }
@@ -266,11 +354,10 @@ export default function CreateBus() {
                         </SelectContent>
                       </Select>
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="rating">Rating</Label>
                       <Select
-                        value={formData.rating?.toFixed(1)} // Changed toString() to toFixed(1)
+                        value={formData.rating?.toFixed(1) || ""}
                         onValueChange={(value) =>
                           handleSelectChange("rating", value)
                         }
@@ -279,16 +366,7 @@ export default function CreateBus() {
                           <SelectValue placeholder="Select rating" />
                         </SelectTrigger>
                         <SelectContent>
-                          {[
-                            "3.0",
-                            "3.5",
-                            "4.0",
-                            "4.2",
-                            "4.5",
-                            "4.7",
-                            "4.8",
-                            "5.0",
-                          ].map((r) => (
+                          {generateRatingOptions().map((r) => (
                             <SelectItem key={r} value={r}>
                               {r} ⭐
                             </SelectItem>
@@ -298,8 +376,6 @@ export default function CreateBus() {
                     </div>
                   </div>
                 </div>
-
-                {/* Amenities */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
                     Amenities
@@ -326,8 +402,6 @@ export default function CreateBus() {
                     ))}
                   </div>
                 </div>
-
-                {/* Seat Layout Builder */}
                 {formData.seatCount && formData.seatCount > 0 ? (
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -346,8 +420,6 @@ export default function CreateBus() {
                     <p>Please select a bus type to configure the seat layout</p>
                   </div>
                 )}
-
-                {/* Preview */}
                 {formData.operator &&
                   formData.seats &&
                   formData.seats.length > 0 && (
@@ -367,7 +439,6 @@ export default function CreateBus() {
                             </p>
                           </div>
                         </div>
-
                         {formData.amenities &&
                           formData.amenities.length > 0 && (
                             <div className="mb-4">
@@ -386,7 +457,6 @@ export default function CreateBus() {
                               </div>
                             </div>
                           )}
-
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
                             <span className="text-gray-500">Layout:</span>
@@ -423,8 +493,6 @@ export default function CreateBus() {
                       </div>
                     </div>
                   )}
-
-                {/* Form Actions */}
                 <div className="flex justify-end space-x-4 pt-6 border-t">
                   <Button
                     type="button"
@@ -446,12 +514,12 @@ export default function CreateBus() {
                     {isLoading ? (
                       <div className="flex items-center space-x-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>Creating...</span>
+                        <span>Saving...</span>
                       </div>
                     ) : (
                       <div className="flex items-center space-x-2">
                         <Save className="w-4 h-4" />
-                        <span>Create Bus</span>
+                        <span>Save Changes</span>
                       </div>
                     )}
                   </Button>

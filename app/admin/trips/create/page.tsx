@@ -1,4 +1,3 @@
-// app/admin/trips/create/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -22,18 +21,62 @@ import {
 } from "../../../../components/ui/card";
 import { ArrowLeft, MapPin, Save } from "lucide-react";
 import { toast } from "sonner";
-import { Trip } from "../../../../context/BookingContext";
-import { mockRoutes, mockBuses, mockTrips } from "../../../../lib/mockData";
+import { useBusStore, useTripStore } from "../../../../lib/store/store";
+import { Trip } from "../../../../shared/types";
 import Image from "next/image";
 import ProtectedRoute from "../../../../components/ProtectedRoute";
+import { useAuthStore } from "lib/store/authStore";
+
+// Predefined routes (replace mockRoutes; can be fetched from an API if available)
+const ROUTES = [
+  "Abia",
+  "Abuja",
+  "Adamawa",
+  "Akwa Ibom",
+  "Anambra",
+  "Bauchi",
+  "Bayelsa",
+  "Benue",
+  "Borno",
+  "Cross River",
+  "Delta",
+  "Ebonyi",
+  "Edo",
+  "Ekiti",
+  "Enugu",
+  "Gombe",
+  "Imo",
+  "Jigawa",
+  "Kaduna",
+  "Kano",
+  "Katsina",
+  "Kebbi",
+  "Kogi",
+  "Kwara",
+  "Lagos",
+  "Nasarawa",
+  "Niger",
+  "Ogun",
+  "Ondo",
+  "Osun",
+  "Oyo",
+  "Plateau",
+  "Rivers",
+  "Sokoto",
+  "Taraba",
+  "Yobe",
+  "Zamfara",
+];
 
 export default function CreateTrip() {
   const router = useRouter();
-  //   const { busTypes } = useBusTypes();
+  const { buses, fetchBuses, error: busError } = useBusStore();
+  const { trips, fetchTrips, createTrip, error: tripError } = useTripStore();
+  const { user } = useAuthStore();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    busId: mockBuses[0]?.id || "",
+    busId: "",
     from: "",
     to: "",
     date: "",
@@ -49,8 +92,28 @@ export default function CreateTrip() {
       router.push("/admin/login");
     } else {
       setIsAuthenticated(true);
+      if (buses.length === 0) {
+        console.log("Fetching buses");
+        fetchBuses();
+      }
+      if (trips.length === 0) {
+        console.log("Fetching trips for conflict check");
+        fetchTrips();
+      }
     }
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, buses, trips]);
+
+  useEffect(() => {
+    if (busError) {
+      console.error(`Bus error: ${busError}`);
+      toast.error("Failed to load buses", { description: busError });
+    }
+    if (tripError) {
+      console.error(`Trip error: ${tripError}`);
+      toast.error("Failed to load trips", { description: tripError });
+    }
+  }, [busError, tripError]);
 
   const calculateDuration = (departure: string, arrival: string) => {
     if (!departure || !arrival) return "0h 0m";
@@ -76,25 +139,49 @@ export default function CreateTrip() {
     setFormData((prev) => ({ ...prev, [name]: checked }));
   };
 
-  const isTripConflict = (newTrip: Trip) => {
-    const tripStart = new Date(
-      `${newTrip.date.toISOString().split("T")[0]}T${newTrip.departureTime}:00`
-    );
-    const tripEnd = new Date(
-      `${newTrip.date.toISOString().split("T")[0]}T${newTrip.arrivalTime}:00`
-    );
+  const isTripConflict = (
+    newTrip: Omit<Trip, "id" | "createdAt" | "bus" | "duration"> & {
+      date: string | Date;
+    }
+  ) => {
+    // Validate date format (YYYY-MM-DD)
+    const dateStr =
+      typeof newTrip.date === "string"
+        ? newTrip.date
+        : newTrip.date.toISOString().split("T")[0];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr) || isNaN(Date.parse(dateStr))) {
+      return false; // Invalid date, skip conflict check to avoid crashing
+    }
+
+    const tripDate = new Date(dateStr);
+    const tripStart = new Date(`${dateStr}T${newTrip.departureTime}:00`);
+    const tripEnd = new Date(`${dateStr}T${newTrip.arrivalTime}:00`);
     if (tripEnd < tripStart) tripEnd.setDate(tripEnd.getDate() + 1);
-    return mockTrips.some(
-      (t) =>
+
+    return trips.some((t) => {
+      const tDateStr =
+        typeof t.date === "string"
+          ? t.date
+          : t.date.toISOString().split("T")[0];
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(tDateStr) ||
+        isNaN(Date.parse(tDateStr))
+      ) {
+        return false; // Skip invalid trip dates
+      }
+
+      const tDate = new Date(tDateStr);
+      const tStart = new Date(`${tDateStr}T${t.departureTime}:00`);
+      const tEnd = new Date(`${tDateStr}T${t.arrivalTime}:00`);
+      if (tEnd < tStart) tEnd.setDate(tEnd.getDate() + 1);
+
+      return (
         t.busId === newTrip.busId &&
-        t.id !== newTrip.id &&
-        new Date(t.date).toDateString() === newTrip.date.toDateString() &&
-        new Date(
-          `${t.date.toISOString().split("T")[0]}T${t.departureTime}:00`
-        ) <= tripEnd &&
-        new Date(`${t.date.toISOString().split("T")[0]}T${t.arrivalTime}:00`) >=
-          tripStart
-    );
+        tDate.toDateString() === tripDate.toDateString() &&
+        tStart <= tripEnd &&
+        tEnd >= tripStart
+      );
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,40 +202,74 @@ export default function CreateTrip() {
       toast.error("Price must be at least ₦500");
       return;
     }
+    if (!user?.email) {
+      toast.error("User authentication required");
+      return;
+    }
+    // Validate ISO 8601 date format (YYYY-MM-DD)
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(formData.date) ||
+      isNaN(Date.parse(formData.date))
+    ) {
+      toast.error(
+        "Invalid date format. Please use YYYY-MM-DD (e.g., 2025-08-01)"
+      );
+      return;
+    }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const newTrip: Trip = {
-        id: Date.now().toString(),
+      const duration = calculateDuration(
+        formData.departureTime,
+        formData.arrivalTime
+      );
+
+      // Convert date string to proper ISO 8601 format
+      const tripDate = new Date(formData.date + "T00:00:00.000Z");
+
+      const newTripData: Omit<Trip, "id" | "createdAt" | "bus" | "duration"> & {
+        date: string | Date;
+      } = {
         busId: formData.busId,
         from: formData.from,
         to: formData.to,
-        date: new Date(formData.date),
+        date: tripDate.toISOString(), // This will be in proper ISO 8601 format
         departureTime: formData.departureTime,
         arrivalTime: formData.arrivalTime,
-        duration: calculateDuration(
-          formData.departureTime,
-          formData.arrivalTime
-        ),
         price: parseInt(formData.price),
         isAvailable: formData.isAvailable,
       };
 
-      if (isTripConflict(newTrip)) {
+      if (isTripConflict(newTripData)) {
         toast.error("This bus is already assigned to a conflicting trip.");
         return;
       }
 
-      console.log("New trip created:", newTrip);
+      await createTrip({
+        busId: formData.busId,
+        from: formData.from,
+        to: formData.to,
+        date: tripDate.toISOString(), // Send as proper ISO 8601 string
+        departureTime: formData.departureTime,
+        arrivalTime: formData.arrivalTime,
+        price: parseInt(formData.price),
+        isAvailable: formData.isAvailable,
+        duration,
+        createdBy: user.email,
+        modifiedBy: user.email,
+      });
+
       toast.success("Trip created successfully!");
-      router.push("/admin/buses");
+      router.push("/admin/trips");
     } catch (error: unknown) {
-      toast.error("Failed to create trip. Please try again.", {
-        description: (error as Error).message,
+      console.error(`Create trip error: ${(error as Error).message}`);
+      toast.error("Failed to create trip", {
+        description: (error as Error).message.includes("date")
+          ? "Invalid date format. Please use YYYY-MM-DD (e.g., 2025-08-01)"
+          : (error as Error).message,
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -169,11 +290,11 @@ export default function CreateTrip() {
               <div className="flex items-center space-x-4">
                 <Button
                   variant="ghost"
-                  onClick={() => router.push("/admin/buses")}
+                  onClick={() => router.push("/admin/trips")}
                   className="flex items-center space-x-2"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  <span>Back to Buses</span>
+                  <span>Back to Trips</span>
                 </Button>
                 <div className="flex items-center space-x-2">
                   <Image
@@ -216,7 +337,7 @@ export default function CreateTrip() {
                           <SelectValue placeholder="Select bus" />
                         </SelectTrigger>
                         <SelectContent>
-                          {mockBuses.map((bus) => (
+                          {buses.map((bus) => (
                             <SelectItem key={bus.id} value={bus.id}>
                               {bus.operator} ({bus.busType})
                             </SelectItem>
@@ -235,10 +356,10 @@ export default function CreateTrip() {
                         }
                       >
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Select origin" />
                         </SelectTrigger>
                         <SelectContent>
-                          {mockRoutes.map((route) => (
+                          {ROUTES.map((route) => (
                             <SelectItem key={route} value={route}>
                               {route}
                             </SelectItem>
@@ -257,10 +378,10 @@ export default function CreateTrip() {
                         }
                       >
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Select destination" />
                         </SelectTrigger>
                         <SelectContent>
-                          {mockRoutes.map((route) => (
+                          {ROUTES.map((route) => (
                             <SelectItem key={route} value={route}>
                               {route}
                             </SelectItem>
@@ -352,13 +473,14 @@ export default function CreateTrip() {
                         <div className="flex items-center justify-between">
                           <div>
                             <h4 className="font-semibold">
-                              {mockBuses.find((b) => b.id === formData.busId)
-                                ?.operator || "Bus"}
+                              {buses.find((b) => b.id === formData.busId)
+                                ?.operator || "Unknown Bus"}
                             </h4>
                             <p className="text-sm text-gray-600">
-                              {formData.from} to {formData.to} • {formData.date}{" "}
-                              • {formData.departureTime} -{" "}
-                              {formData.arrivalTime} • Duration:{" "}
+                              {formData.from} to {formData.to} •{" "}
+                              {new Date(formData.date).toLocaleDateString()} •{" "}
+                              {formData.departureTime} - {formData.arrivalTime}{" "}
+                              • Duration:{" "}
                               {calculateDuration(
                                 formData.departureTime,
                                 formData.arrivalTime
@@ -384,16 +506,17 @@ export default function CreateTrip() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => router.push("/admin/buses")}
+                    onClick={() => router.push("/admin/trips")}
+                    disabled={isSubmitting}
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                     className="bg-primary hover:bg-blue-700"
                   >
-                    {isLoading ? (
+                    {isSubmitting ? (
                       <div className="flex items-center space-x-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                         <span>Creating...</span>

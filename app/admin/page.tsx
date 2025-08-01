@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../../components/ui/button";
 import {
@@ -19,29 +19,76 @@ import {
   Calendar,
   Book,
 } from "lucide-react";
-import { mockBuses, mockTrips } from "../../lib/mockData";
 import Image from "next/image";
-import ProtectedRoute from "../../components/ProtectedRoute";
+import { useAuthStore } from "../../lib/store/authStore";
+import { useBusStore, useTripStore } from "../../lib/store/store";
+import ProtectedRoute from "components/ProtectedRoute";
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, isLoading: authLoading, logout } = useAuthStore();
+  const {
+    buses,
+    fetchBuses,
+    isLoading: busLoading,
+    // error: busError,
+    clearError: clearBusError, // <-- Get the clearError function
+  } = useBusStore();
+  const {
+    trips,
+    fetchTrips,
+    isLoading: tripLoading,
+    // error: tripError,
+  } = useTripStore();
 
   useEffect(() => {
-    const adminAuth = localStorage.getItem("adminAuth");
-    if (!adminAuth) {
-      router.push("/admin/login");
-    } else {
-      setIsAuthenticated(true);
+    const token = localStorage.getItem("token");
+
+    if (!user && token && !authLoading) {
+      useAuthStore.getState().initAuth();
+      return;
     }
-  }, [router]);
+
+    if (!user && !authLoading) {
+      router.push("/admin/login");
+      return;
+    }
+
+    if (!user) return;
+
+    const fetchPromises: Promise<void>[] = [];
+
+    if (buses.length === 0) {
+      fetchPromises.push(fetchBuses({ limit: 10 }));
+    }
+
+    if (trips.length === 0) {
+      fetchPromises.push(fetchTrips({ limit: 5 }));
+    }
+
+    if (fetchPromises.length > 0) {
+      Promise.allSettled(fetchPromises).catch(console.error);
+    }
+    return () => {
+      clearBusError();
+    };
+  }, [
+    user,
+    authLoading,
+    buses.length,
+    trips.length,
+    fetchBuses,
+    fetchTrips,
+    router,
+    clearBusError, // Ensure to clear the error when component unmounts
+  ]);
 
   const handleLogout = () => {
-    localStorage.removeItem("adminAuth");
+    logout();
     router.push("/admin/login");
   };
 
-  if (!isAuthenticated) {
+  if (authLoading || busLoading || tripLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
@@ -49,16 +96,28 @@ export default function AdminDashboard() {
     );
   }
 
+  // if (busError || tripError) {
+  //   return (
+  //     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  //       <div className="text-red-600">{busError || tripError}</div>
+  //     </div>
+  //   );
+  // }
+
+  if (!user) {
+    return null; // Redirect handled by useEffect
+  }
+
   // Calculate statistics
-  const totalBuses = mockBuses.length;
-  const totalTrips = mockTrips.length;
-  const totalSeats = mockTrips.reduce((sum, trip) => {
-    const bus = mockBuses.find((b) => b.id === trip.busId);
+  const totalBuses = buses.length;
+  const totalTrips = trips.length;
+  const totalSeats = trips.reduce((sum, trip) => {
+    const bus = buses.find((b) => b.id === trip.busId);
     return sum + (bus ? bus.seats.length : 0);
   }, 0);
-  const availableSeats = mockTrips.reduce((sum, trip) => {
+  const availableSeats = trips.reduce((sum, trip) => {
     if (!trip.isAvailable) return sum;
-    const bus = mockBuses.find((b) => b.id === trip.busId);
+    const bus = buses.find((b) => b.id === trip.busId);
     return (
       sum + (bus ? bus.seats.filter((seat) => seat.isAvailable).length : 0)
     );
@@ -129,7 +188,7 @@ export default function AdminDashboard() {
           {/* Welcome Section */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Welcome back, Admin!
+              Welcome back, {user.firstName}!
             </h1>
             <p className="text-gray-600">
               Here&apos;s what&apos;s happening with your bus fleet and trips
@@ -210,8 +269,8 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockTrips.slice(0, 5).map((trip) => {
-                  const bus = mockBuses.find((b) => b.id === trip.busId);
+                {trips.slice(0, 5).map((trip) => {
+                  const bus = buses.find((b) => b.id === trip.busId);
                   return (
                     <div
                       key={trip.id}
@@ -229,7 +288,9 @@ export default function AdminDashboard() {
                           <div className="flex items-center space-x-4 text-sm text-gray-600">
                             <span className="flex items-center space-x-1">
                               <Calendar className="w-3 h-3" />
-                              <span>{trip.date.toLocaleDateString()}</span>
+                              <span>
+                                {new Date(trip.date).toLocaleDateString()}
+                              </span>
                             </span>
                             <span className="flex items-center space-x-1">
                               <MapPin className="w-3 h-3" />
@@ -253,10 +314,14 @@ export default function AdminDashboard() {
                       <div className="flex items-center space-x-4">
                         <Badge
                           variant={
-                            bus?.busType === "luxury" ? "default" : "normal"
+                            bus?.busType.toLowerCase() === "luxury"
+                              ? "default"
+                              : "normal"
                           }
                         >
-                          {bus?.busType === "luxury" ? "Luxury" : "Standard"}
+                          {bus?.busType.toLowerCase() === "luxury"
+                            ? "Luxury"
+                            : "Standard"}
                         </Badge>
                         <div className="text-right">
                           <div className="font-semibold text-gray-900">
@@ -268,7 +333,7 @@ export default function AdminDashboard() {
                     </div>
                   );
                 })}
-                {mockTrips.length === 0 && (
+                {trips.length === 0 && (
                   <div className="text-center text-gray-500 py-8">
                     No trips found.
                   </div>

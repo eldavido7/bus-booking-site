@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { mockBuses, mockTrips } from "../../../lib/mockData";
 import { Button } from "../../../components/ui/button";
 import {
   Card,
@@ -21,25 +20,39 @@ import {
   Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTripStore, useBusStore } from "../../../lib/store/store";
+import { Trip } from "../../../shared/types";
+import ProtectedRoute from "../../../components/ProtectedRoute";
 import EditTripModal from "../../../components/modals/EditTripModal";
 import DeleteTripModal from "../../../components/modals/DeleteTripModal";
 import AvailabilityModal from "../../../components/modals/AvailabilityModal";
-import { Trip } from "../../../context/BookingContext";
-import ProtectedRoute from "../../../components/ProtectedRoute";
+import { useAuthStore } from "lib/store/authStore";
 
 export default function TripsPage() {
   const router = useRouter();
+  const { user } = useAuthStore();
+
+  const {
+    trips,
+    fetchTrips,
+    updateTrip,
+    deleteTrip,
+    isLoading: tripLoading,
+    error: tripError,
+  } = useTripStore();
+  const { buses, fetchBuses, error: busError } = useBusStore();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [editTrip, setEditTrip] = useState<Trip | null>(null);
-  const [deleteTrip, setDeleteTrip] = useState<{
+  const [DeleteTrip, setDeleteTrip] = useState<{
     id: string;
     operator: string;
     from: string;
     to: string;
   } | null>(null);
   const [availabilityTrip, setAvailabilityTrip] = useState<Trip | null>(null);
-  const [trips, setTrips] = useState<Trip[]>(mockTrips);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const adminAuth = localStorage.getItem("adminAuth");
@@ -47,26 +60,120 @@ export default function TripsPage() {
       router.push("/admin/login");
     } else {
       setIsAuthenticated(true);
+      if (!tripLoading && trips.length === 0) {
+        console.log("Fetching trips");
+        fetchTrips();
+      }
+      if (buses.length === 0) {
+        console.log("Fetching buses");
+        fetchBuses();
+      }
     }
-  }, [router]);
+  }, [router, tripLoading, trips.length, buses.length, fetchTrips, fetchBuses]);
+
+  useEffect(() => {
+    if (tripError) {
+      console.error(`Trip error: ${tripError}`);
+      toast.error("Failed to load trips", { description: tripError });
+    }
+    if (busError) {
+      console.error(`Bus error: ${busError}`);
+      toast.error("Failed to load buses", { description: busError });
+    }
+  }, [tripError, busError]);
 
   const handleEditTrip = (trip: Trip) => {
     setEditTrip(trip);
     setMenuOpen(null);
   };
 
-  const handleSaveEditTrip = (updatedTrip: Trip) => {
-    setTrips((prev) =>
-      prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
-    );
-    toast.success("Trip updated successfully");
-    setEditTrip(null);
+  const calculateDuration = (departure: string, arrival: string) => {
+    if (!departure || !arrival) return "0h 0m";
+    const [depHour, depMin] = departure.split(":").map(Number);
+    const [arrHour, arrMin] = arrival.split(":").map(Number);
+    let totalMinutes = arrHour * 60 + arrMin - (depHour * 60 + depMin);
+    if (totalMinutes < 0) totalMinutes += 24 * 60;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours}h ${minutes}m`;
+  };
+
+  const handleSaveEditTrip = async (
+    updatedTrip: Trip & { date: string | Date }
+  ) => {
+    setIsSavingEdit(true);
+    try {
+      if (!user?.email) {
+        toast.error("User authentication required");
+        return;
+      }
+
+      console.log("🔍 Received updatedTrip:", {
+        ...updatedTrip,
+        dateType: typeof updatedTrip.date,
+        dateValue: updatedTrip.date,
+      });
+
+      let isoDateString: string;
+      if (updatedTrip.date instanceof Date) {
+        isoDateString = updatedTrip.date.toISOString();
+      } else if (typeof updatedTrip.date === "string") {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(updatedTrip.date)) {
+          isoDateString = `${updatedTrip.date}T00:00:00.000Z`;
+        } else {
+          isoDateString = updatedTrip.date;
+        }
+      } else {
+        toast.error("Invalid date format received");
+        return;
+      }
+
+      if (isNaN(Date.parse(isoDateString))) {
+        toast.error("Invalid date format. Please try again.");
+        return;
+      }
+
+      const duration = calculateDuration(
+        updatedTrip.departureTime,
+        updatedTrip.arrivalTime
+      );
+
+      const updatePayload = {
+        busId: updatedTrip.busId,
+        from: updatedTrip.from,
+        to: updatedTrip.to,
+        date: isoDateString,
+        departureTime: updatedTrip.departureTime,
+        arrivalTime: updatedTrip.arrivalTime,
+        price: updatedTrip.price,
+        isAvailable: updatedTrip.isAvailable,
+        duration,
+        modifiedBy: user.email,
+      };
+
+      console.log("📤 Sending update payload:", updatePayload);
+
+      await updateTrip(updatedTrip.id, updatePayload);
+
+      toast.success("Trip updated successfully");
+      setEditTrip(null); // Close the modal here after success
+    } catch (error: unknown) {
+      console.error(`Update trip error: ${(error as Error).message}`);
+      toast.error("Failed to update trip", {
+        description: (error as Error).message.includes("date")
+          ? "Invalid date format. Please use YYYY-MM-DD (e.g., 2025-08-01)"
+          : (error as Error).message,
+      });
+      throw error; // Re-throw to let the modal handle it
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   const handleDeleteTrip = (id: string) => {
     const trip = trips.find((t) => t.id === id);
     if (trip) {
-      const bus = mockBuses.find((b) => b.id === trip.busId);
+      const bus = buses.find((b) => b.id === trip.busId);
       setDeleteTrip({
         id,
         operator: bus?.operator || "Unknown",
@@ -77,10 +184,20 @@ export default function TripsPage() {
     setMenuOpen(null);
   };
 
-  const confirmDeleteTrip = (id: string) => {
-    setTrips((prev) => prev.filter((t) => t.id !== id));
-    toast.success("Trip deleted successfully");
-    setDeleteTrip(null);
+  const confirmDeleteTrip = async (id: string) => {
+    setIsDeleting(true);
+    try {
+      await deleteTrip(id);
+      toast.success("Trip deleted successfully");
+      setDeleteTrip(null);
+    } catch (error: unknown) {
+      console.error(`Delete trip error: ${(error as Error).message}`);
+      toast.error("Failed to delete trip", {
+        description: (error as Error).message,
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleManageAvailability = (trip: Trip) => {
@@ -88,12 +205,32 @@ export default function TripsPage() {
     setMenuOpen(null);
   };
 
-  const handleSaveAvailability = (updatedTrip: Trip) => {
-    setTrips((prev) =>
-      prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
-    );
-    toast.success("Trip availability updated successfully");
-    setAvailabilityTrip(null);
+  const handleSaveAvailability = async (
+    updatedTrip: Trip & { date: string | Date }
+  ) => {
+    try {
+      const dateString =
+        updatedTrip.date instanceof Date
+          ? updatedTrip.date.toISOString().split("T")[0]
+          : updatedTrip.date;
+      await updateTrip(updatedTrip.id, {
+        busId: updatedTrip.busId,
+        from: updatedTrip.from,
+        to: updatedTrip.to,
+        date: dateString,
+        departureTime: updatedTrip.departureTime,
+        arrivalTime: updatedTrip.arrivalTime,
+        price: updatedTrip.price,
+        isAvailable: updatedTrip.isAvailable,
+      });
+      toast.success("Trip availability updated successfully");
+      setAvailabilityTrip(null);
+    } catch (error: unknown) {
+      console.error(`Update availability error: ${(error as Error).message}`);
+      toast.error("Failed to update trip availability", {
+        description: (error as Error).message,
+      });
+    }
   };
 
   if (!isAuthenticated) {
@@ -140,7 +277,7 @@ export default function TripsPage() {
             <CardContent>
               <div className="space-y-4">
                 {trips.map((trip) => {
-                  const bus = mockBuses.find((b) => b.id === trip.busId);
+                  const bus = buses.find((b) => b.id === trip.busId);
                   return (
                     <div
                       key={trip.id}
@@ -158,7 +295,9 @@ export default function TripsPage() {
                           <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
                             <span className="flex items-center space-x-1">
                               <Calendar className="w-3 h-3" />
-                              <span>{trip.date.toLocaleDateString()}</span>
+                              <span>
+                                {new Date(trip.date).toLocaleDateString()}
+                              </span>
                             </span>
                             <span className="flex items-center space-x-1">
                               <MapPin className="w-3 h-3" />
@@ -235,14 +374,16 @@ export default function TripsPage() {
             isOpen={!!editTrip}
             onClose={() => setEditTrip(null)}
             onSave={handleSaveEditTrip}
+            isSaving={isSavingEdit}
           />
         )}
-        {deleteTrip && (
+        {DeleteTrip && (
           <DeleteTripModal
-            trip={deleteTrip}
+            trip={DeleteTrip}
             isOpen={!!deleteTrip}
             onClose={() => setDeleteTrip(null)}
             onDelete={confirmDeleteTrip}
+            isDeleting={isDeleting}
           />
         )}
         {availabilityTrip && (

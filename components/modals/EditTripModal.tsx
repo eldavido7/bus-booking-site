@@ -1,5 +1,5 @@
 // components/modals/EditTripModal.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -18,15 +18,57 @@ import {
   DialogTitle,
   DialogFooter,
 } from "../ui/dialog";
-import { Trip } from "../../context/BookingContext";
-import { mockRoutes, mockBuses, mockTrips } from "../../lib/mockData";
+import { Trip } from "../../shared/types";
 import { toast } from "sonner";
+import { useBusStore, useTripStore } from "../../lib/store/store";
+
+// Predefined routes (same as in create trip)
+const ROUTES = [
+  "Abia",
+  "Abuja",
+  "Adamawa",
+  "Akwa Ibom",
+  "Anambra",
+  "Bauchi",
+  "Bayelsa",
+  "Benue",
+  "Borno",
+  "Cross River",
+  "Delta",
+  "Ebonyi",
+  "Edo",
+  "Ekiti",
+  "Enugu",
+  "Gombe",
+  "Imo",
+  "Jigawa",
+  "Kaduna",
+  "Kano",
+  "Katsina",
+  "Kebbi",
+  "Kogi",
+  "Kwara",
+  "Lagos",
+  "Nasarawa",
+  "Niger",
+  "Ogun",
+  "Ondo",
+  "Osun",
+  "Oyo",
+  "Plateau",
+  "Rivers",
+  "Sokoto",
+  "Taraba",
+  "Yobe",
+  "Zamfara",
+];
 
 interface EditTripModalProps {
   trip: Trip;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (updatedTrip: Trip) => void;
+  onSave: (updatedTrip: Trip & { date: string | Date }) => Promise<void>;
+  isSaving: boolean;
 }
 
 export default function EditTripModal({
@@ -34,17 +76,57 @@ export default function EditTripModal({
   isOpen,
   onClose,
   onSave,
+  isSaving,
 }: EditTripModalProps) {
+  const { buses } = useBusStore();
+  const { trips } = useTripStore();
+
+  // Debug log to see what trip data we're receiving
+  useEffect(() => {
+    console.log("🔍 EditTripModal received trip:", {
+      ...trip,
+      dateType: typeof trip.date,
+      dateValue: trip.date,
+    });
+  }, [trip]);
+
   const [formData, setFormData] = useState({
-    busId: trip.busId,
-    from: trip.from,
-    to: trip.to,
-    date: trip.date.toISOString().slice(0, 10),
-    departureTime: trip.departureTime,
-    arrivalTime: trip.arrivalTime,
-    price: trip.price.toString(),
-    isAvailable: trip.isAvailable,
+    busId: "",
+    from: "",
+    to: "",
+    date: "",
+    departureTime: "",
+    arrivalTime: "",
+    price: "",
+    isAvailable: true,
   });
+
+  // Initialize form data when trip changes
+  useEffect(() => {
+    if (trip) {
+      // Handle different date formats
+      let dateString: string;
+      if (typeof trip.date === "string") {
+        const date = new Date(trip.date);
+        dateString = date.toISOString().split("T")[0];
+      } else {
+        dateString = trip.date.toISOString().split("T")[0];
+      }
+
+      console.log("🔧 Parsed date for form:", dateString);
+
+      setFormData({
+        busId: trip.busId || "",
+        from: trip.from || "",
+        to: trip.to || "",
+        date: dateString,
+        departureTime: trip.departureTime || "",
+        arrivalTime: trip.arrivalTime || "",
+        price: trip.price?.toString() || "",
+        isAvailable: trip.isAvailable ?? true,
+      });
+    }
+  }, [trip]);
 
   const calculateDuration = (departure: string, arrival: string) => {
     if (!departure || !arrival) return "0h 0m";
@@ -70,65 +152,118 @@ export default function EditTripModal({
     setFormData((prev) => ({ ...prev, [name]: checked }));
   };
 
-  const isTripConflict = (newTrip: Trip) => {
-    const tripStart = new Date(
-      `${newTrip.date.toISOString().split("T")[0]}T${newTrip.departureTime}:00`
-    );
-    const tripEnd = new Date(
-      `${newTrip.date.toISOString().split("T")[0]}T${newTrip.arrivalTime}:00`
-    );
+  const isTripConflict = (newTrip: Trip & { date: string | Date }) => {
+    // Validate date format (YYYY-MM-DD)
+    const dateStr =
+      typeof newTrip.date === "string"
+        ? newTrip.date.includes("T")
+          ? newTrip.date.split("T")[0]
+          : newTrip.date
+        : newTrip.date.toISOString().split("T")[0];
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr) || isNaN(Date.parse(dateStr))) {
+      return false; // Invalid date, skip conflict check to avoid crashing
+    }
+
+    const tripDate = new Date(dateStr);
+    const tripStart = new Date(`${dateStr}T${newTrip.departureTime}:00`);
+    const tripEnd = new Date(`${dateStr}T${newTrip.arrivalTime}:00`);
     if (tripEnd < tripStart) tripEnd.setDate(tripEnd.getDate() + 1);
-    return mockTrips.some(
-      (t) =>
+
+    return trips.some((t) => {
+      // Skip the current trip we're editing
+      if (t.id === newTrip.id) return false;
+
+      const tDateStr = new Date(t.date).toISOString().split("T")[0];
+      // typeof t.date === "string"
+      //   ? t.date.includes("T")
+      //     ? t.date.split("T")[0]
+      //     : t.date
+      //   : t.date.toISOString().split("T")[0];
+
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(tDateStr) ||
+        isNaN(Date.parse(tDateStr))
+      ) {
+        return false; // Skip invalid trip dates
+      }
+
+      const tDate = new Date(tDateStr);
+      const tStart = new Date(`${tDateStr}T${t.departureTime}:00`);
+      const tEnd = new Date(`${tDateStr}T${t.arrivalTime}:00`);
+      if (tEnd < tStart) tEnd.setDate(tEnd.getDate() + 1);
+
+      return (
         t.busId === newTrip.busId &&
-        t.id !== newTrip.id &&
-        new Date(t.date).toDateString() === newTrip.date.toDateString() &&
-        new Date(
-          `${t.date.toISOString().split("T")[0]}T${t.departureTime}:00`
-        ) <= tripEnd &&
-        new Date(`${t.date.toISOString().split("T")[0]}T${t.arrivalTime}:00`) >=
-          tripStart
-    );
+        tDate.toDateString() === tripDate.toDateString() &&
+        tStart <= tripEnd &&
+        tEnd >= tripStart
+      );
+    });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      !formData.busId ||
-      !formData.from ||
-      !formData.to ||
-      !formData.date ||
-      !formData.departureTime ||
-      !formData.arrivalTime ||
-      !formData.price
-    ) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-    if (parseInt(formData.price) < 500) {
-      toast.error("Price must be at least ₦500");
-      return;
-    }
 
-    const updatedTrip: Trip = {
-      ...trip,
-      busId: formData.busId,
-      from: formData.from,
-      to: formData.to,
-      date: new Date(formData.date),
-      departureTime: formData.departureTime,
-      arrivalTime: formData.arrivalTime,
-      duration: calculateDuration(formData.departureTime, formData.arrivalTime),
-      price: parseInt(formData.price),
-      isAvailable: formData.isAvailable,
-    };
+    try {
+      if (
+        !formData.busId ||
+        !formData.from ||
+        !formData.to ||
+        !formData.date ||
+        !formData.departureTime ||
+        !formData.arrivalTime ||
+        !formData.price
+      ) {
+        toast.error("Please fill in all required fields");
+        return;
+      }
+      if (parseInt(formData.price) < 500) {
+        toast.error("Price must be at least ₦500");
+        return;
+      }
 
-    if (isTripConflict(updatedTrip)) {
-      toast.error("This bus is already assigned to a conflicting trip.");
-      return;
+      // Validate date format
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(formData.date) ||
+        isNaN(Date.parse(formData.date))
+      ) {
+        toast.error("Invalid date format. Please use YYYY-MM-DD format.");
+        return;
+      }
+
+      const updatedTrip: Trip & { date: string | Date } = {
+        ...trip,
+        busId: formData.busId,
+        from: formData.from,
+        to: formData.to,
+        date: formData.date, // Keep as string in YYYY-MM-DD format
+        departureTime: formData.departureTime,
+        arrivalTime: formData.arrivalTime,
+        duration: calculateDuration(
+          formData.departureTime,
+          formData.arrivalTime
+        ),
+        price: parseInt(formData.price),
+        isAvailable: formData.isAvailable,
+      };
+
+      console.log("📝 Submitting updated trip:", updatedTrip);
+
+      if (isTripConflict(updatedTrip)) {
+        toast.error("This bus is already assigned to a conflicting trip.");
+        return;
+      }
+
+      // Call onSave and wait for it to complete
+      await onSave(updatedTrip);
+
+      // Only close the modal after successful save
+      onClose();
+    } catch (error: unknown) {
+      // Error handling is done in the parent component
+      console.error("Error saving trip:", error);
     }
-    onSave(updatedTrip);
-    onClose();
   };
 
   return (
@@ -149,10 +284,10 @@ export default function EditTripModal({
                   onValueChange={(value) => handleSelectChange("busId", value)}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select bus" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockBuses.map((bus) => (
+                    {buses.map((bus) => (
                       <SelectItem key={bus.id} value={bus.id}>
                         {bus.operator} ({bus.busType})
                       </SelectItem>
@@ -169,10 +304,10 @@ export default function EditTripModal({
                   onValueChange={(value) => handleSelectChange("from", value)}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select origin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockRoutes.map((route) => (
+                    {ROUTES.map((route) => (
                       <SelectItem key={route} value={route}>
                         {route}
                       </SelectItem>
@@ -189,10 +324,10 @@ export default function EditTripModal({
                   onValueChange={(value) => handleSelectChange("to", value)}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select destination" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockRoutes.map((route) => (
+                    {ROUTES.map((route) => (
                       <SelectItem key={route} value={route}>
                         {route}
                       </SelectItem>
@@ -250,6 +385,7 @@ export default function EditTripModal({
                   min="500"
                   value={formData.price}
                   onChange={handleInputChange}
+                  placeholder="e.g., 1200"
                   required
                 />
               </div>
@@ -266,12 +402,29 @@ export default function EditTripModal({
               <Label htmlFor="isAvailable">Trip Available</Label>
             </div>
           </div>
+
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSaving}
+            >
               Cancel
             </Button>
-            <Button type="submit" className="bg-primary hover:bg-blue-700">
-              Save
+            <Button
+              type="submit"
+              className="bg-primary hover:bg-blue-700"
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Saving Changes...</span>
+                </div>
+              ) : (
+                "Save Changes"
+              )}
             </Button>
           </DialogFooter>
         </form>

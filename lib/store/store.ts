@@ -21,6 +21,9 @@ type Seat = {
     id: string;
     number: string;
     isAvailable: boolean;
+    isSelected: boolean; // UI-specific
+    type: "regular" | "premium" | "driver";
+    price?: number;
 };
 
 type Bus = {
@@ -38,13 +41,16 @@ type Trip = {
     busId: string;
     from: string;
     to: string;
-    date: string;
+    date: Date;
     departureTime: string;
     arrivalTime: string;
     price: number;
     isAvailable: boolean;
     createdAt: string;
     bus: Bus;
+    createdBy: string;
+    modifiedBy: string;
+    duration: string; // e.g., "8h 0m"
 };
 
 type Passenger = {
@@ -97,6 +103,9 @@ type TripInput = {
     arrivalTime: string;
     price: number;
     isAvailable?: boolean;
+    duration: string;
+    createdBy: string;
+    modifiedBy: string;
 };
 
 type BookingInput = {
@@ -132,7 +141,8 @@ interface BusState {
     fetchBus: (busId: string) => Promise<void>;
     createBus: (data: BusInput) => Promise<Bus>;
     updateBus: (busId: string, data: Partial<BusInput>) => Promise<Bus>;
-    deleteBus: (busId: string) => Promise<void>;
+    deleteBuss: (busId: string) => Promise<void>;
+    clearCurrentBus: () => void;
     clearError: () => void;
 }
 
@@ -301,7 +311,7 @@ export const useBusStore = create<BusState>((set) => ({
         }
     },
 
-    deleteBus: async (busId: string) => {
+    deleteBuss: async (busId: string) => {
         set({ isLoading: true, error: null });
         try {
             await apiCall(`/api/buses/${busId}`, { method: 'DELETE' });
@@ -316,6 +326,7 @@ export const useBusStore = create<BusState>((set) => ({
         }
     },
 
+    clearCurrentBus: () => set({ currentBus: null }),
     clearError: () => set({ error: null }),
 }));
 

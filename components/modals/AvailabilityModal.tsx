@@ -1,4 +1,6 @@
-// components/modals/AvailabilityModal.tsx
+"use client";
+
+import { useState } from "react";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
@@ -9,16 +11,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from "../ui/dialog";
-import { Trip } from "../../context/BookingContext";
-import { mockBuses } from "../../lib/mockData";
-import { toast } from "sonner";
-import { useState } from "react";
+import { useBusStore } from "../../lib/store/store";
+import { Trip, Bus } from "../../shared/types";
 
 interface AvailabilityModalProps {
-  trip: Trip;
+  trip: Trip & { date: string | Date };
   isOpen: boolean;
   onClose: () => void;
-  onSave: (updatedTrip: Trip) => void;
+  onSave: (updatedTrip: Trip & { date: string | Date }) => void;
 }
 
 export default function AvailabilityModal({
@@ -27,15 +27,26 @@ export default function AvailabilityModal({
   onClose,
   onSave,
 }: AvailabilityModalProps) {
+  const { buses } = useBusStore();
   const [isAvailable, setIsAvailable] = useState(trip.isAvailable);
-  const bus = mockBuses.find((b) => b.id === trip.busId);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const bus = buses.find((b: Bus) => b.id === trip.busId);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const updatedTrip: Trip = { ...trip, isAvailable };
-    onSave(updatedTrip);
-    toast.success(`Trip ${isAvailable ? "enabled" : "disabled"} successfully`);
-    onClose();
+    setIsSubmitting(true);
+    try {
+      const updatedTrip: Trip & { date: string | Date } = {
+        ...trip,
+        isAvailable,
+      };
+      onSave(updatedTrip);
+      onClose();
+    } catch (error: unknown) {
+      console.error(`Availability save error: ${(error as Error).message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -47,10 +58,11 @@ export default function AvailabilityModal({
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
-              {bus?.operator || "Bus"}
+              {bus?.operator || "Unknown Bus"}
             </h3>
             <p className="text-sm text-gray-600">
-              {trip.from} to {trip.to} | {trip.date.toLocaleDateString()}
+              {trip.from} to {trip.to} |{" "}
+              {new Date(trip.date).toLocaleDateString()}
             </p>
           </div>
           <div className="flex items-center space-x-2">
@@ -62,11 +74,27 @@ export default function AvailabilityModal({
             <Label htmlFor="isAvailable">Trip Available for Booking</Label>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button type="submit" className="bg-primary hover:bg-blue-700">
-              Save
+            <Button
+              type="submit"
+              className="bg-primary hover:bg-blue-700"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Saving...</span>
+                </div>
+              ) : (
+                "Save"
+              )}
             </Button>
           </DialogFooter>
         </form>

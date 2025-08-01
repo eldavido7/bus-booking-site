@@ -40,9 +40,9 @@ export interface Trip {
   date: Date;
   departureTime: string;
   arrivalTime: string;
-  duration: string;
   price: number;
   isAvailable: boolean;
+  duration: string; // e.g., "8h 0m"
 }
 
 export interface Passenger {
