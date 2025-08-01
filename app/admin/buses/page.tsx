@@ -69,6 +69,7 @@ export default function BusesPage() {
   const [editTrip, setEditTrip] = useState<Trip | null>(null);
   const [availabilityTrip, setAvailabilityTrip] = useState<Trip | null>(null);
   const [isDeleting, setIsDeleting] = useState(false); // <-- Add a local loading state for delete
+  const [isSavingEdit] = useState(false);
 
   // Map store data to BookingContext types
   const buses: Buss[] = storeBuses.map((bus) => ({
@@ -97,6 +98,8 @@ export default function BusesPage() {
     duration: trip.duration || "0h 0m", // Fallback if duration is missing
     price: trip.price,
     isAvailable: trip.isAvailable,
+    createdBy: trip.createdBy,
+    modifiedBy: trip.modifiedBy,
   }));
 
   useEffect(() => {
@@ -395,6 +398,7 @@ export default function BusesPage() {
             isOpen={!!editTrip}
             onClose={() => setEditTrip(null)}
             onSave={handleSaveEditTrip}
+            isSaving={isSavingEdit}
           />
         )}
         {availabilityTrip && (
