@@ -79,7 +79,7 @@ model Trip {
 }
 
 model Booking {
-  reference     String   @id // e.g., "TE12345678"
+  reference     String   @id @unique // e.g., "TE12345678"
   status        String // "confirmed" | "cancelled" | "completed"
   tripId        String
   busId         String
@@ -107,6 +107,8 @@ model Passenger {
   bookingId  String
   name       String
   seat       String // Seat number (e.g., "1A")
+  age        Int
+  gender     String
   booking    Booking @relation(fields: [bookingId], references: [reference], onDelete: Cascade)
   @@unique([bookingId, seat]) // Ensure unique seat per booking
 }

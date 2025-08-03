@@ -62,6 +62,8 @@ export interface TripResponse {
 export interface PassengerInput {
     name: string;
     seat: string; // Seat number, e.g., "1A"
+    age: number;
+    gender: "male" | "female";
 }
 
 export interface BookingInput {
@@ -70,6 +72,7 @@ export interface BookingInput {
     phone: string;
     passengers: PassengerInput[];
     paymentReference?: string; // Paystack reference
+    reference: string;
 }
 
 export interface BookingResponse {

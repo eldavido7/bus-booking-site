@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
@@ -23,61 +23,18 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useBooking, type Booking } from "../../context/BookingContext";
 
 export default function TripSearch() {
+  const {
+    fetchBooking,
+    state: { isLoading },
+  } = useBooking();
   const [bookingRef, setBookingRef] = useState("");
-  type Booking = {
-    reference: string;
-    status: string;
-    route: { from: string; to: string };
-    date: string;
-    time: string;
-    operator: string;
-    passengers: { name: string; seat: string }[];
-    contact: { email: string; phone: string };
-    totalAmount: number;
-    bookingDate: string;
-  };
-
   const [searchResult, setSearchResult] = useState<Booking | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
-
-  // Mock booking data for demonstration
-  const mockBookings = {
-    TE12345678: {
-      reference: "TE12345678",
-      status: "confirmed",
-      route: { from: "Lagos", to: "Abuja" },
-      date: "2024-01-15",
-      time: "07:00",
-      operator: "GIG Express",
-      passengers: [
-        { name: "John Doe", seat: "01A" },
-        { name: "Jane Doe", seat: "01B" },
-      ],
-      contact: {
-        email: "john.doe@email.com",
-        phone: "+234 801 234 5678",
-      },
-      totalAmount: 2400,
-      bookingDate: "2024-01-10",
-    },
-    TE87654321: {
-      reference: "TE87654321",
-      status: "cancelled",
-      route: { from: "Kano", to: "Lagos" },
-      date: "2024-01-20",
-      time: "14:30",
-      operator: "ABC Transport",
-      passengers: [{ name: "Ahmed Ibrahim", seat: "03C" }],
-      contact: {
-        email: "ahmed.ibrahim@email.com",
-        phone: "+234 802 345 6789",
-      },
-      totalAmount: 800,
-      bookingDate: "2024-01-12",
-    },
-  };
+  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [emailToSend, setEmailToSend] = useState("");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const handleSearch = async () => {
     if (!bookingRef.trim()) {
@@ -85,28 +42,15 @@ export default function TripSearch() {
       return;
     }
 
-    setIsSearching(true);
-
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      const booking =
-        mockBookings[bookingRef.toUpperCase() as keyof typeof mockBookings];
-
-      if (booking) {
-        setSearchResult(booking);
-        toast.success("Booking found successfully!");
-      } else {
-        setSearchResult(null);
-        toast.error("Booking not found. Please check your reference number.");
-      }
-    } catch (error: unknown) {
-      toast.error("Search failed. Please try again.", {
+      const booking = await fetchBooking(bookingRef.toUpperCase());
+      setSearchResult(booking);
+      toast.success("Booking found successfully!");
+    } catch (error) {
+      setSearchResult(null);
+      toast.error("Booking not found. Please check your reference number.", {
         description: (error as Error).message,
       });
-    } finally {
-      setIsSearching(false);
     }
   };
 
@@ -127,12 +71,40 @@ export default function TripSearch() {
     switch (status) {
       case "confirmed":
         return <CheckCircle className="w-4 h-4" />;
+      case "completed":
+        return <CheckCircle className="w-4 h-4" />;
       case "cancelled":
         return <AlertCircle className="w-4 h-4" />;
       default:
         return <Clock className="w-4 h-4" />;
     }
   };
+
+  const sendTicketEmail = useCallback(async () => {
+    if (!searchResult || !emailToSend) return;
+
+    setIsSendingEmail(true);
+    try {
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: emailToSend,
+          booking: searchResult,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to send email");
+      toast.success("Ticket sent successfully!");
+      setShowEmailInput(false);
+    } catch (error) {
+      toast.error("Failed to send email", {
+        description: (error as Error).message,
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  }, [searchResult, emailToSend]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -171,10 +143,10 @@ export default function TripSearch() {
                 />
                 <Button
                   onClick={handleSearch}
-                  disabled={isSearching}
+                  disabled={isLoading}
                   className="w-full sm:w-auto bg-primary hover:bg-blue-700 px-8"
                 >
-                  {isSearching ? (
+                  {isLoading ? (
                     <div className="flex items-center space-x-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                       <span>Searching...</span>
@@ -190,33 +162,6 @@ export default function TripSearch() {
               <p className="text-sm text-gray-600">
                 Your booking reference was sent to your email after booking
               </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Demo References */}
-        <Card className="mb-8 bg-blue-50 border-blue-200">
-          <CardContent className="p-6">
-            <h3 className="font-semibold text-blue-900 mb-3">
-              Try these demo booking references:
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-white p-3 rounded border">
-                <div className="font-mono font-medium text-primary">
-                  TE12345678
-                </div>
-                <div className="text-sm text-gray-600">
-                  Confirmed booking (Lagos → Abuja)
-                </div>
-              </div>
-              <div className="bg-white p-3 rounded border">
-                <div className="font-mono font-medium text-red-600">
-                  TE87654321
-                </div>
-                <div className="text-sm text-gray-600">
-                  Cancelled booking (Kano → Lagos)
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -255,7 +200,7 @@ export default function TripSearch() {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Route:</span>
                       <span className="font-medium">
-                        {searchResult.route.from} → {searchResult.route.to}
+                        {searchResult.from} → {searchResult.to}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -333,16 +278,12 @@ export default function TripSearch() {
                   <div className="flex items-center space-x-2">
                     <Mail className="w-4 h-4 text-primary" />
                     <span className="text-gray-600">Email:</span>
-                    <span className="font-medium">
-                      {searchResult.contact.email}
-                    </span>
+                    <span className="font-medium">{searchResult.email}</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Phone className="w-4 h-4 text-green-600" />
                     <span className="text-gray-600">Phone:</span>
-                    <span className="font-medium">
-                      {searchResult.contact.phone}
-                    </span>
+                    <span className="font-medium">{searchResult.phone}</span>
                   </div>
                 </div>
               </div>
@@ -350,22 +291,67 @@ export default function TripSearch() {
               {/* Actions */}
               {searchResult.status === "confirmed" && (
                 <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t">
-                  <Button
-                    variant="outline"
-                    className="flex items-center space-x-2"
-                  >
-                    <Mail className="w-4 h-4" />
-                    <span>Email Ticket</span>
-                  </Button>
-                  <Link href="/contact">
-                    <Button
-                      variant="outline"
-                      className="flex items-center space-x-2"
-                    >
-                      <Phone className="w-4 h-4" />
-                      <span>Contact Support</span>
-                    </Button>
-                  </Link>
+                  {showEmailInput ? (
+                    // When email input is shown, use the existing layout
+                    <div className="flex flex-col sm:flex-row gap-4 w-full">
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Input
+                          type="email"
+                          placeholder="recipient@example.com"
+                          value={emailToSend}
+                          onChange={(e) => setEmailToSend(e.target.value)}
+                          className=""
+                        />
+                        <Button
+                          onClick={sendTicketEmail}
+                          disabled={isSendingEmail}
+                          className="flex items-center space-x-2 bg-primary hover:bg-blue-700"
+                        >
+                          {isSendingEmail ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              <span>Sending...</span>
+                            </div>
+                          ) : (
+                            <>
+                              <Mail className="w-4 h-4" />
+                              <span>Send Ticket</span>
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <Link href="/contact">
+                        <Button
+                          variant="outline"
+                          className="flex items-center space-x-2"
+                        >
+                          <Phone className="w-4 h-4" />
+                          <span>Contact Support</span>
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : (
+                    // When email input is hidden, show buttons with equal width
+                    <div className="flex flex-col sm:flex-row gap-4 w-full">
+                      <Button
+                        variant="outline"
+                        className="flex items-center justify-center space-x-2 flex-1"
+                        onClick={() => setShowEmailInput(true)}
+                      >
+                        <Mail className="w-4 h-4" />
+                        <span>Email Ticket</span>
+                      </Button>
+                      <Link href="/contact" className="flex-1">
+                        <Button
+                          variant="outline"
+                          className="flex items-center justify-center space-x-2 w-full"
+                        >
+                          <Phone className="w-4 h-4" />
+                          <span>Contact Support</span>
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

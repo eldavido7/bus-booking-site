@@ -8,6 +8,7 @@ export type User = {
     firstName: string;
     lastName: string;
     email: string;
+    password: string;
     phone: string;
     createdAt: Date;
     isActive: boolean;
@@ -53,6 +54,7 @@ export async function verifyAdmin(request: Request): Promise<VerifyAdminResult> 
             firstName: session.user.firstName,
             lastName: session.user.lastName,
             email: session.user.email,
+            password: session.user.password,
             phone: session.user.phone,
             createdAt: session.user.createdAt,
             isActive: session.user.isActive,

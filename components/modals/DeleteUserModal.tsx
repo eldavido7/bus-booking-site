@@ -13,6 +13,7 @@ interface DeleteUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onDelete: (id: string) => void;
+  isDeleting: boolean;
 }
 
 export default function DeleteUserModal({
@@ -20,7 +21,12 @@ export default function DeleteUserModal({
   isOpen,
   onClose,
   onDelete,
+  isDeleting,
 }: DeleteUserModalProps) {
+  const handleDelete = async () => {
+    await onDelete(user.id);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
@@ -32,15 +38,28 @@ export default function DeleteUserModal({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isDeleting}
+          >
             Cancel
           </Button>
           <Button
             type="button"
             variant="destructive"
-            onClick={() => onDelete(user.id)}
+            onClick={handleDelete}
+            disabled={isDeleting}
           >
-            Delete
+            {isDeleting ? (
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Deleting...</span>
+              </div>
+            ) : (
+              "Delete"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

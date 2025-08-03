@@ -23,10 +23,17 @@ export interface BusType {
   seats: number;
 }
 
+export interface SeatLayoutJson {
+  rows: number;
+  columns: number;
+  arrangement: string[][];
+}
+
 export interface Bus {
   id: string;
   operator: string;
   busType: string;
+  seatLayout?: SeatLayoutJson;
   seats: Seat[];
   amenities: string[];
   rating: number;
@@ -41,14 +48,31 @@ export interface Trip {
   departureTime: string;
   arrivalTime: string;
   price: number;
+  duration: string;
   isAvailable: boolean;
-  duration: string; // e.g., "8h 0m"
+  createdAt?: string;
+  bus?: Bus;
+  createdBy: string;
+  modifiedBy: string;
 }
 
 export interface Passenger {
-  firstName: string;
-  lastName: string;
-  email: string;
+  name: string;
+  seat: string;
+  age: number;
+  gender: "male" | "female";
+}
+
+export interface StorePassenger {
+  id: string;
+  name: string;
+  age: number;
+  seat: string;
+  gender: "male" | "female";
+}
+
+export interface UIPassenger {
+  name: string;
   phone: string;
   age: number;
   gender: "male" | "female";
@@ -56,17 +80,27 @@ export interface Passenger {
 
 export interface Booking {
   reference: string;
-  status: "confirmed" | "cancelled" | "completed";
+  status: "confirmed" | "cancelled" | "completed" | string;
   tripId: string;
   busId: string;
-  route: { from: string; to: string };
+  from: string;
+  to: string;
   date: string;
   time: string;
   operator: string;
-  passengers: { name: string; seat: string }[];
-  contact: { email: string; phone: string };
+  passengers: StorePassenger[];
+  email: string;
+  phone: string;
   totalAmount: number;
   bookingDate: string;
+  createdAt?: string;
+  paymentReference?: string;
+  trip?: Trip;
+}
+
+export interface Contact {
+  email: string;
+  phone: string;
 }
 
 export interface BookingState {
@@ -83,6 +117,9 @@ export interface BookingState {
   passengers: Passenger[];
   totalAmount: number;
   bookings: Booking[];
+  isLoading: boolean;
+  error: string | null;
+  contact: Contact | null; // Added contact
 }
 
 type BookingAction =
@@ -97,7 +134,11 @@ type BookingAction =
       type: "CANCEL_BOOKING";
       payload: { reference: string; busId: string; seatNumbers: string[] };
     }
-  | { type: "RESET_BOOKING" };
+  | { type: "RESET_BOOKING" }
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_BOOKINGS"; payload: Booking[] }
+  | { type: "SET_CONTACT_INFO"; payload: Contact }; // Added SET_CONTACT_INFO
 
 const initialState: BookingState = {
   step: 1,
@@ -108,6 +149,9 @@ const initialState: BookingState = {
   passengers: [],
   totalAmount: 0,
   bookings: [],
+  isLoading: false,
+  error: null,
+  contact: null, // Initialize contact as null
 };
 
 function bookingReducer(
@@ -133,10 +177,8 @@ function bookingReducer(
       const newSelectedSeats = seatExists
         ? state.selectedSeats.filter((s) => s.id !== action.payload.id)
         : [...state.selectedSeats, action.payload];
-      const totalAmount = newSelectedSeats.reduce(
-        (sum, seat) => sum + (seat.price || state.selectedTrip?.price || 0),
-        0
-      );
+      const totalAmount =
+        newSelectedSeats.length * (state.selectedTrip?.price || 0);
       return { ...state, selectedSeats: newSelectedSeats, totalAmount };
     case "SET_PASSENGERS":
       return { ...state, passengers: action.payload };
@@ -164,20 +206,63 @@ function bookingReducer(
       };
     case "RESET_BOOKING":
       return { ...initialState, bookings: state.bookings };
+    case "SET_LOADING":
+      return { ...state, isLoading: action.payload };
+    case "SET_ERROR":
+      return { ...state, error: action.payload };
+    case "SET_BOOKINGS":
+      return { ...state, bookings: action.payload };
+    case "SET_CONTACT_INFO":
+      return { ...state, contact: action.payload }; // Handle SET_CONTACT_INFO
     default:
       return state;
   }
 }
 
-const BookingContext = createContext<{
+interface BookingContextType {
   state: BookingState;
   dispatch: React.Dispatch<BookingAction>;
-} | null>(null);
+  fetchTrips: (params: {
+    from?: string;
+    to?: string;
+    date?: string;
+    limit?: number;
+    offset?: number;
+  }) => Promise<Trip[]>;
+  fetchTrip: (tripId: string) => Promise<Trip>;
+  fetchBooking: (reference: string) => Promise<Booking>;
+  createBooking: (data: {
+    tripId: string;
+    email: string;
+    phone: string;
+    passengers: Passenger[];
+    paymentReference?: string;
+  }) => Promise<Booking>;
+}
+
+const BookingContext = createContext<BookingContextType | null>(null);
 
 const BusTypeContext = createContext<{
   busTypes: BusType[];
   setBusTypes: React.Dispatch<React.SetStateAction<BusType[]>>;
 } | null>(null);
+
+// Helper function for API calls
+const apiCall = async (url: string, options: RequestInit = {}) => {
+  const response = await fetch(url, {
+    ...options,
+    headers: { "Content-Type": "application/json", ...options.headers },
+  });
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ error: { message: "Unknown error" } }));
+    throw new Error(errorData.error?.message || "Request failed");
+  }
+
+  return response.json();
+};
 
 export function BookingProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(bookingReducer, initialState);
@@ -186,8 +271,105 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     { id: "2", name: "Luxury", seats: 32 },
   ]);
 
+  const fetchTrips = async (params: {
+    from?: string;
+    to?: string;
+    date?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<Trip[]> => {
+    dispatch({ type: "SET_LOADING", payload: true });
+    dispatch({ type: "SET_ERROR", payload: null });
+    try {
+      const queryString = new URLSearchParams(
+        Object.entries(params).reduce((acc, [key, value]) => {
+          if (value !== undefined) acc[key] = String(value);
+          return acc;
+        }, {} as Record<string, string>)
+      ).toString();
+
+      const response = await apiCall(
+        `/api/trips/user${queryString ? `?${queryString}` : ""}`
+      );
+      return response.data;
+    } catch (error) {
+      dispatch({ type: "SET_ERROR", payload: (error as Error).message });
+      throw error;
+    } finally {
+      dispatch({ type: "SET_LOADING", payload: false });
+    }
+  };
+
+  const fetchTrip = async (tripId: string): Promise<Trip> => {
+    dispatch({ type: "SET_LOADING", payload: true });
+    dispatch({ type: "SET_ERROR", payload: null });
+    try {
+      const trip = await apiCall(`/api/trips/user/${tripId}`);
+      dispatch({ type: "SET_SELECTED_TRIP", payload: trip });
+      dispatch({ type: "SET_SELECTED_BUS", payload: trip.bus });
+      return trip;
+    } catch (error) {
+      dispatch({ type: "SET_ERROR", payload: (error as Error).message });
+      throw error;
+    } finally {
+      dispatch({ type: "SET_LOADING", payload: false });
+    }
+  };
+
+  const fetchBooking = async (reference: string): Promise<Booking> => {
+    dispatch({ type: "SET_LOADING", payload: true });
+    dispatch({ type: "SET_ERROR", payload: null });
+    try {
+      const booking = await apiCall(`/api/bookings/user/${reference}`);
+      dispatch({ type: "SET_BOOKINGS", payload: [booking] });
+      return booking;
+    } catch (error) {
+      dispatch({ type: "SET_ERROR", payload: (error as Error).message });
+      throw error;
+    } finally {
+      dispatch({ type: "SET_LOADING", payload: false });
+    }
+  };
+
+  const createBooking = async (data: {
+    tripId: string;
+    email: string;
+    phone: string;
+    passengers: Passenger[];
+    paymentReference?: string;
+  }): Promise<Booking> => {
+    dispatch({ type: "SET_LOADING", payload: true });
+    dispatch({ type: "SET_ERROR", payload: null });
+    try {
+      const booking = await apiCall("/api/bookings/user", {
+        method: "POST",
+        body: JSON.stringify({
+          ...data,
+          status: "confirmed",
+        }),
+      });
+      dispatch({ type: "ADD_BOOKING", payload: booking });
+      dispatch({ type: "RESET_BOOKING" });
+      return booking;
+    } catch (error) {
+      dispatch({ type: "SET_ERROR", payload: (error as Error).message });
+      throw error;
+    } finally {
+      dispatch({ type: "SET_LOADING", payload: false });
+    }
+  };
+
   return (
-    <BookingContext.Provider value={{ state, dispatch }}>
+    <BookingContext.Provider
+      value={{
+        state,
+        dispatch,
+        fetchTrips,
+        fetchTrip,
+        fetchBooking,
+        createBooking,
+      }}
+    >
       <BusTypeContext.Provider value={{ busTypes, setBusTypes }}>
         {children}
       </BusTypeContext.Provider>

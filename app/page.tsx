@@ -14,9 +14,8 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { Card, CardContent } from "../components/ui/card";
-// import { Badge } from '@/components/ui/badge';
 import { useBooking } from "../context/BookingContext";
-import { mockRoutes, testimonials } from "../lib/mockData";
+import { testimonials } from "../lib/mockData";
 import {
   MapPin,
   Calendar,
@@ -27,6 +26,47 @@ import {
   Headphones,
 } from "lucide-react";
 import { toast } from "sonner";
+
+// Sample cities for the dropdown (replace with dynamic data if needed)
+const cities = [
+  "Abia",
+  "Abuja",
+  "Adamawa",
+  "Akwa Ibom",
+  "Anambra",
+  "Bauchi",
+  "Bayelsa",
+  "Benue",
+  "Borno",
+  "Cross River",
+  "Delta",
+  "Ebonyi",
+  "Edo",
+  "Ekiti",
+  "Enugu",
+  "Gombe",
+  "Imo",
+  "Jigawa",
+  "Kaduna",
+  "Kano",
+  "Katsina",
+  "Kebbi",
+  "Kogi",
+  "Kwara",
+  "Lagos",
+  "Nasarawa",
+  "Niger",
+  "Ogun",
+  "Ondo",
+  "Osun",
+  "Oyo",
+  "Plateau",
+  "Rivers",
+  "Sokoto",
+  "Taraba",
+  "Yobe",
+  "Zamfara",
+];
 
 export default function HomePage() {
   const router = useRouter();
@@ -49,7 +89,13 @@ export default function HomePage() {
       return;
     }
 
-    dispatch({ type: "SET_SEARCH_DATA", payload: searchForm });
+    // Convert date to ISO format (YYYY-MM-DDTHH:mm:ss.SSSZ)
+    const isoDate = new Date(searchForm.date).toISOString();
+
+    dispatch({
+      type: "SET_SEARCH_DATA",
+      payload: { ...searchForm, date: isoDate },
+    });
     dispatch({ type: "SET_STEP", payload: 2 });
     router.push("/search-results");
   };
@@ -89,7 +135,7 @@ export default function HomePage() {
                       <SelectValue placeholder="Departure city" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockRoutes.map((city) => (
+                      {cities.map((city) => (
                         <SelectItem key={city} value={city}>
                           {city}
                         </SelectItem>
@@ -113,7 +159,7 @@ export default function HomePage() {
                       <SelectValue placeholder="Destination city" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockRoutes
+                      {cities
                         .filter((city) => city !== searchForm.from)
                         .map((city) => (
                           <SelectItem key={city} value={city}>

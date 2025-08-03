@@ -1,4 +1,5 @@
-// components/admin/EditUserModal.tsx
+"use client";
+
 import { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -18,6 +19,8 @@ import {
   DialogFooter,
 } from "../ui/dialog";
 import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react";
+import { useUserStore } from "../../lib/store/store";
 
 interface User {
   id: string;
@@ -26,6 +29,8 @@ interface User {
   email: string;
   phone: string;
   isActive: boolean;
+  createdBy: string | null;
+  modifiedBy: string | null;
 }
 
 interface EditUserModalProps {
@@ -41,12 +46,15 @@ export default function EditUserModal({
   onClose,
   onSave,
 }: EditUserModalProps) {
+  const { updateUser, isLoading } = useUserStore();
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     firstName: user.firstName,
     lastName: user.lastName,
     email: user.email,
     phone: user.phone,
     isActive: user.isActive,
+    password: "",
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,10 +63,10 @@ export default function EditUserModal({
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value === "true" }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.firstName || !formData.lastName || !formData.email) {
       toast.error("Please fill in all required fields");
@@ -69,17 +77,37 @@ export default function EditUserModal({
       toast.error("Please enter a valid email address");
       return;
     }
+    if (formData.password && formData.password.length < 8) {
+      toast.error("Password must be at least 8 characters long");
+      return;
+    }
 
-    const updatedUser: User = {
-      ...user,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      phone: formData.phone,
-      isActive: formData.isActive,
-    };
-    onSave(updatedUser);
-    onClose();
+    try {
+      const updateData: Partial<User> & { password?: string } = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        isActive: formData.isActive,
+      };
+      if (formData.password) updateData.password = formData.password;
+
+      await updateUser(user.id, updateData);
+      const updatedUser: User = {
+        ...user,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        isActive: formData.isActive,
+      };
+      onSave(updatedUser);
+      onClose();
+    } catch (error) {
+      toast.error("Failed to update user", {
+        description: (error as Error).message,
+      });
+    }
   };
 
   return (
@@ -137,6 +165,35 @@ export default function EditUserModal({
               />
             </div>
             <div>
+              <Label htmlFor="password">New Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="Enter new password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-sm text-gray-600">
+                Leave blank to keep current password
+              </p>
+            </div>
+            <div>
               <Label htmlFor="isActive">Status</Label>
               <Select
                 value={formData.isActive.toString()}
@@ -156,8 +213,19 @@ export default function EditUserModal({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" className="bg-primary hover:bg-blue-700">
-              Save
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="bg-primary hover:bg-blue-700"
+            >
+              {isLoading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Saving...</span>
+                </div>
+              ) : (
+                "Save"
+              )}
             </Button>
           </DialogFooter>
         </form>

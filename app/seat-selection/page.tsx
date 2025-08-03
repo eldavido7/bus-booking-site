@@ -10,9 +10,8 @@ import {
   CardTitle,
 } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
-import { useBooking } from "../../context/BookingContext";
-import { Seat } from "../../context/BookingContext";
-import { ArrowLeft, User, Crown, X } from "lucide-react";
+import { useBooking, Seat } from "../../context/BookingContext";
+import { ArrowLeft, User, Crown } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 
@@ -21,7 +20,11 @@ function SeatSelectionContent() {
   const { state, dispatch } = useBooking();
 
   useEffect(() => {
-    if (!state.selectedTrip || !state.selectedBus) {
+    if (
+      !state.selectedTrip ||
+      !state.selectedBus ||
+      !state.selectedBus.seatLayout
+    ) {
       router.push("/search-results");
     }
   }, [state.selectedTrip, state.selectedBus, router]);
@@ -59,9 +62,25 @@ function SeatSelectionContent() {
     router.push("/passenger-info");
   };
 
-  if (!state.selectedTrip || !state.selectedBus) return null;
+  if (
+    !state.selectedTrip ||
+    !state.selectedBus ||
+    !state.selectedBus.seatLayout
+  ) {
+    return null;
+  }
 
-  const renderSeat = (seat: Seat) => {
+  const renderSeat = (seat: Seat | null, seatNumber: string) => {
+    if (!seat) {
+      // Render aisle for empty string
+      return (
+        <div
+          key={seatNumber}
+          className="w-12 h-12 border-2 border-dashed border-gray-300 rounded-lg"
+        />
+      );
+    }
+
     const isSelected = state.selectedSeats.find((s) => s.id === seat.id);
     const isPremium = seat.type === "premium";
 
@@ -71,88 +90,83 @@ function SeatSelectionContent() {
         onClick={() => handleSeatClick(seat)}
         disabled={!seat.isAvailable}
         className={`
-          relative w-10 h-10 rounded-lg border-2 transition-all duration-200 text-xs font-medium
+          w-12 h-12 rounded-lg border-2 flex items-center justify-center text-xs font-medium transition-all
           ${
             !seat.isAvailable
-              ? "bg-gray-200 border-gray-300 cursor-not-allowed"
+              ? "bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed"
               : isSelected
-              ? "bg-primary border-blue-700 text-white scale-110 shadow-lg"
+              ? "bg-blue-100 border-blue-400 text-blue-800"
               : isPremium
-              ? "bg-yellow-50 border-yellow-300 hover:bg-yellow-100 hover:border-yellow-400"
-              : "bg-green-50 border-green-300 hover:bg-green-100 hover:border-green-400"
+              ? "bg-yellow-50 border-yellow-300 hover:bg-yellow-100 text-yellow-800"
+              : "bg-green-50 border-green-300 hover:bg-green-100 text-green-800"
           }
         `}
       >
         {isSelected ? (
-          <User className="w-4 h-4 mx-auto" />
-        ) : !seat.isAvailable ? (
-          <X className="w-3 h-3 mx-auto text-gray-400" />
+          <User className="w-4 h-4" />
         ) : isPremium ? (
-          <Crown className="w-3 h-3 mx-auto text-yellow-600" />
+          <Crown className="w-4 h-4 text-yellow-600" />
         ) : (
           seat.number
-        )}
-
-        {isPremium && seat.isAvailable && !isSelected && (
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full"></div>
         )}
       </button>
     );
   };
 
   const renderBusLayout = () => {
-    const seats = state.selectedBus!.seats;
-    const isLuxury = state.selectedBus!.busType === "luxury";
+    const { seatLayout, seats } = state.selectedBus!;
+    if (!seatLayout?.arrangement) return null;
 
-    if (isLuxury) {
-      // 2x2 layout for luxury buses
-      const rows = [];
-      for (let i = 0; i < seats.length; i += 4) {
-        const rowSeats = seats.slice(i, i + 4);
-        rows.push(
-          <div
-            key={i}
-            className="flex items-center justify-center space-x-4 mb-3"
-          >
-            <div className="flex space-x-2">
-              {renderSeat(rowSeats[0])}
-              {renderSeat(rowSeats[1])}
+    const { arrangement } = seatLayout;
+
+    return (
+      <div className="bg-white border-2 border-gray-200 rounded-xl p-6 mx-auto max-w-[600px]">
+        <div className="text-center mb-6 pb-4 border-b border-gray-200">
+          <div className="w-12 h-8 bg-gray-800 rounded mx-auto mb-2"></div>
+          <span className="text-xs text-gray-600">Driver</span>
+        </div>
+        <div className="space-y-3">
+          {arrangement.map((row, rowIndex) => (
+            <div
+              key={rowIndex}
+              className="flex items-center justify-center gap-2 flex-wrap"
+            >
+              {row.map((seatNumber, colIndex) => (
+                <div
+                  key={`${rowIndex}-${colIndex}`}
+                  className="flex flex-col items-center gap-1"
+                >
+                  {renderSeat(
+                    seatNumber
+                      ? seats.find((s) => s.number === seatNumber) || null
+                      : null,
+                    `${rowIndex}-${colIndex}`
+                  )}
+                </div>
+              ))}
             </div>
-            <div className="w-8 h-1 bg-gray-200 rounded"></div>
-            <div className="flex space-x-2">
-              {renderSeat(rowSeats[2])}
-              {renderSeat(rowSeats[3])}
-            </div>
+          ))}
+        </div>
+        <div className="mt-6 pt-4 border-t border-gray-200 flex items-center justify-center gap-6 text-xs">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-green-50 border border-green-300 rounded" />
+            <span>Available</span>
           </div>
-        );
-      }
-      return rows;
-    } else {
-      // 2x3 layout for standard buses
-      const rows = [];
-      for (let i = 0; i < seats.length; i += 6) {
-        const rowSeats = seats.slice(i, i + 6);
-        rows.push(
-          <div
-            key={i}
-            className="flex items-center justify-center space-x-4 mb-3"
-          >
-            <div className="flex space-x-2">
-              {renderSeat(rowSeats[0])}
-              {renderSeat(rowSeats[1])}
-            </div>
-            <div className="w-6 h-1 bg-gray-200 rounded"></div>
-            <div className="flex space-x-2">
-              {renderSeat(rowSeats[2])}
-              {renderSeat(rowSeats[3])}
-              {renderSeat(rowSeats[4])}
-              {renderSeat(rowSeats[5])}
-            </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-blue-100 border border-blue-400 rounded" />
+            <span>Selected</span>
           </div>
-        );
-      }
-      return rows;
-    }
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-gray-200 border border-gray-300 rounded" />
+            <span>Unavailable</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-dashed border-gray-300 rounded" />
+            <span>Aisle</span>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -193,60 +207,16 @@ function SeatSelectionContent() {
                   <span className="text-xl font-medium">Select Your Seats</span>
                   <Badge
                     variant={
-                      state.selectedBus.busType === "luxury"
+                      state.selectedBus.busType === "Luxury"
                         ? "default"
-                        : "secondary"
+                        : "normal"
                     }
                   >
-                    {state.selectedBus.operator} -{" "}
-                    {state.selectedBus.busType === "luxury"
-                      ? "Luxury"
-                      : "Standard"}
+                    {state.selectedBus.operator} - {state.selectedBus.busType}
                   </Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                {/* Legend */}
-                <div className="mb-8 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium mb-3">Seat Legend</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-green-50 border-2 border-green-300 rounded"></div>
-                      <span>Available</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-yellow-50 border-2 border-yellow-300 rounded flex items-center justify-center">
-                        <Crown className="w-3 h-3 text-yellow-600" />
-                      </div>
-                      <span>Premium</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-primary border-2 border-blue-700 rounded flex items-center justify-center">
-                        <User className="w-3 h-3 text-white" />
-                      </div>
-                      <span>Selected</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-gray-200 border-2 border-gray-300 rounded flex items-center justify-center">
-                        <X className="w-3 h-3 text-gray-400" />
-                      </div>
-                      <span>Occupied</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bus Layout */}
-                <div className="bg-white border-2 border-gray-200 rounded-xl p-6 mx-auto max-w-[400px]">
-                  {/* Driver Area */}
-                  <div className="text-center mb-6 pb-4 border-b">
-                    <div className="w-12 h-8 bg-gray-800 rounded mx-auto mb-2"></div>
-                    <span className="text-xs text-gray-600">Driver</span>
-                  </div>
-
-                  {/* Seat Layout */}
-                  <div className="space-y-2">{renderBusLayout()}</div>
-                </div>
-              </CardContent>
+              <CardContent>{renderBusLayout()}</CardContent>
             </Card>
           </div>
 
@@ -276,7 +246,7 @@ function SeatSelectionContent() {
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Time:</span>
+                      <span className="text-red-600">Time:</span>
                       <span>{state.selectedTrip.departureTime}</span>
                     </div>
                     <div className="flex justify-between">
@@ -304,10 +274,7 @@ function SeatSelectionContent() {
                               <Crown className="w-3 h-3 text-yellow-600" />
                             )}
                             <span>
-                              ₦
-                              {(
-                                seat.price || state.selectedTrip!.price
-                              ).toLocaleString()}
+                              ₦{state.selectedTrip?.price.toLocaleString()}
                             </span>
                           </div>
                         </div>

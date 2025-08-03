@@ -52,13 +52,13 @@ export interface StorePassenger {
     id: string;
     name: string;
     seat: string;
+    age: number;
+    gender: "male" | "female";
 }
 
 export interface UIPassenger {
     firstName: string;
     lastName: string;
-    email: string;
-    phone: string;
     age: number;
     gender: "male" | "female";
 }

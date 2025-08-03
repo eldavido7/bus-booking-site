@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -19,14 +19,28 @@ import {
   CardTitle,
 } from "../../components/ui/card";
 import { useBooking, Passenger } from "../../context/BookingContext";
-import { ArrowLeft, User, Mail, Phone, Calendar } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 
 function PassengerInfoContent() {
   const router = useRouter();
   const { state, dispatch } = useBooking();
-  const [passengers, setPassengers] = useState<Passenger[]>([]);
+
+  const [formData, setFormData] = useState<{
+    email: string;
+    phone: string;
+    passengers: Passenger[];
+  }>({
+    email: "",
+    phone: "",
+    passengers: state.selectedSeats.map((seat) => ({
+      name: "",
+      seat: seat.number,
+      age: 0,
+      gender: "male" as const,
+    })),
+  });
 
   useEffect(() => {
     if (
@@ -35,73 +49,59 @@ function PassengerInfoContent() {
       state.selectedSeats.length === 0
     ) {
       router.push("/seat-selection");
-      return;
     }
+  }, [state.selectedTrip, state.selectedBus, state.selectedSeats, router]);
 
-    // Initialize passenger forms
-    const initialPassengers = Array.from(
-      { length: state.searchData.passengers },
-      (_, index) => ({
-        firstName: "",
-        lastName: "",
-        email: index === 0 ? "" : "",
-        phone: index === 0 ? "" : "",
-        age: 25,
-        gender: "male" as const,
-      })
-    );
-    setPassengers(initialPassengers);
-  }, [
-    state.selectedTrip,
-    state.selectedBus,
-    state.selectedSeats,
-    state.searchData.passengers,
-    router,
-  ]);
+  const handleInputChange = (field: "email" | "phone", value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
-  const updatePassenger = (
+  const handlePassengerChange = (
     index: number,
-    field: keyof Passenger,
+    field: "name" | "age" | "gender",
     value: string | number
   ) => {
-    const updatedPassengers = [...passengers];
-    updatedPassengers[index] = { ...updatedPassengers[index], [field]: value };
-    setPassengers(updatedPassengers);
+    const newPassengers = [...formData.passengers];
+    if (field === "age") {
+      const ageValue = parseInt(String(value), 10);
+      newPassengers[index] = {
+        ...newPassengers[index],
+        [field]: isNaN(ageValue) ? 0 : ageValue, // Ensure age is a number, default to 0 only for invalid input
+      };
+    } else {
+      newPassengers[index] = { ...newPassengers[index], [field]: value };
+    }
+    setFormData((prev) => ({ ...prev, passengers: newPassengers }));
   };
 
   const validateForm = () => {
-    // Validate first passenger (primary contact)
-    const primaryPassenger = passengers[0];
-    if (
-      !primaryPassenger?.firstName ||
-      !primaryPassenger?.lastName ||
-      !primaryPassenger?.email ||
-      !primaryPassenger?.phone
-    ) {
-      toast.error(
-        "Please fill in all required fields for the primary passenger"
-      );
-      return false;
-    }
+    const { email, phone, passengers } = formData;
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(primaryPassenger.email)) {
+    if (!email || !emailRegex.test(email)) {
       toast.error("Please enter a valid email address");
       return false;
     }
 
-    // Validate phone format (Nigerian format)
     const phoneRegex = /^(\+234|0)[789]\d{9}$/;
-    if (!phoneRegex.test(primaryPassenger.phone)) {
+    if (!phone || !phoneRegex.test(phone)) {
       toast.error("Please enter a valid Nigerian phone number");
       return false;
     }
 
-    // Validate all passengers have names
+    if (passengers.length !== state.selectedSeats.length) {
+      toast.error("Please provide details for all selected seats");
+      return false;
+    }
+
     for (let i = 0; i < passengers.length; i++) {
-      if (!passengers[i]?.firstName || !passengers[i]?.lastName) {
+      const { name, age } = passengers[i];
+      if (!name) {
         toast.error(`Please fill in the name for passenger ${i + 1}`);
+        return false;
+      }
+      if (!age || age < 1 || age > 120) {
+        toast.error(`Please enter a valid age (1-120) for passenger ${i + 1}`);
         return false;
       }
     }
@@ -112,7 +112,17 @@ function PassengerInfoContent() {
   const handleContinue = () => {
     if (!validateForm()) return;
 
-    dispatch({ type: "SET_PASSENGERS", payload: passengers });
+    // Ensure age is a number in the dispatched passengers
+    const passengersWithNumberAge = formData.passengers.map((p) => ({
+      ...p,
+      age: Number(p.age), // Explicitly convert to number
+    }));
+
+    dispatch({ type: "SET_PASSENGERS", payload: passengersWithNumberAge });
+    dispatch({
+      type: "SET_CONTACT_INFO",
+      payload: { email: formData.email, phone: formData.phone },
+    });
     dispatch({ type: "SET_STEP", payload: 5 });
     router.push("/payment");
   };
@@ -121,12 +131,12 @@ function PassengerInfoContent() {
     !state.selectedTrip ||
     !state.selectedBus ||
     state.selectedSeats.length === 0
-  )
+  ) {
     return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
@@ -154,163 +164,178 @@ function PassengerInfoContent() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Passenger Forms */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
                 <CardTitle>Passenger Information</CardTitle>
                 <p className="text-sm text-gray-600">
-                  Please provide information for all passengers. The first
-                  passenger will be the primary contact.
+                  Please provide information for all passengers. The contact
+                  details will be used for booking confirmation.
                 </p>
               </CardHeader>
               <CardContent className="space-y-8">
-                {passengers.map((passenger, index) => (
-                  <div
-                    key={index}
-                    className="border border-gray-200 rounded-lg p-6"
-                  >
-                    <div className="flex items-center space-x-2 mb-4">
-                      <User className="w-5 h-5 text-primary" />
-                      <h3 className="text-lg font-semibold">
-                        Passenger {index + 1}{" "}
-                        {index === 0 && "(Primary Contact)"}
-                      </h3>
-                      <div className="text-sm text-gray-600">
-                        - Seat {state.selectedSeats[index]?.number}
-                      </div>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Contact Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="email"
+                        className="flex items-center space-x-1"
+                      >
+                        <Mail className="w-4 h-4" />
+                        <span>
+                          Email <span className="text-red-500">*</span>
+                        </span>
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) =>
+                          handleInputChange("email", e.target.value)
+                        }
+                        placeholder="Enter email address"
+                        required
+                      />
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor={`firstName-${index}`}>
-                          First Name <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id={`firstName-${index}`}
-                          value={passenger.firstName}
-                          onChange={(e) =>
-                            updatePassenger(index, "firstName", e.target.value)
-                          }
-                          placeholder="Enter first name"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor={`lastName-${index}`}>
-                          Last Name <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id={`lastName-${index}`}
-                          value={passenger.lastName}
-                          onChange={(e) =>
-                            updatePassenger(index, "lastName", e.target.value)
-                          }
-                          placeholder="Enter last name"
-                        />
-                      </div>
-
-                      {index === 0 && (
-                        <>
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor={`email-${index}`}
-                              className="flex items-center space-x-1"
-                            >
-                              <Mail className="w-4 h-4" />
-                              <span>
-                                Email <span className="text-red-500">*</span>
-                              </span>
-                            </Label>
-                            <Input
-                              id={`email-${index}`}
-                              type="email"
-                              value={passenger.email}
-                              onChange={(e) =>
-                                updatePassenger(index, "email", e.target.value)
-                              }
-                              placeholder="Enter email address"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor={`phone-${index}`}
-                              className="flex items-center space-x-1"
-                            >
-                              <Phone className="w-4 h-4" />
-                              <span>
-                                Phone <span className="text-red-500">*</span>
-                              </span>
-                            </Label>
-                            <Input
-                              id={`phone-${index}`}
-                              value={passenger.phone}
-                              onChange={(e) =>
-                                updatePassenger(index, "phone", e.target.value)
-                              }
-                              placeholder="e.g., +2348012345678"
-                            />
-                          </div>
-                        </>
-                      )}
-
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor={`age-${index}`}
-                          className="flex items-center space-x-1"
-                        >
-                          <Calendar className="w-4 h-4" />
-                          <span>Age</span>
-                        </Label>
-                        <Input
-                          id={`age-${index}`}
-                          type="number"
-                          min="1"
-                          max="120"
-                          value={passenger.age}
-                          onChange={(e) =>
-                            updatePassenger(
-                              index,
-                              "age",
-                              parseInt(e.target.value) || 25
-                            )
-                          }
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor={`gender-${index}`}>Gender</Label>
-                        <Select
-                          value={passenger.gender}
-                          onValueChange={(value: "male" | "female") =>
-                            updatePassenger(index, "gender", value)
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="male">Male</SelectItem>
-                            <SelectItem value="female">Female</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="phone"
+                        className="flex items-center space-x-1"
+                      >
+                        <Phone className="w-4 h-4" />
+                        <span>
+                          Phone <span className="text-red-500">*</span>
+                        </span>
+                      </Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) =>
+                          handleInputChange("phone", e.target.value)
+                        }
+                        placeholder="e.g., +2348012345678"
+                        required
+                      />
                     </div>
                   </div>
-                ))}
+                </div>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">
+                    Passenger Details ({state.selectedSeats.length} seats
+                    selected)
+                  </h3>
+                  {formData.passengers
+                    .sort((a, b) => a.seat.localeCompare(b.seat))
+                    .map((passenger, index) => (
+                      <div
+                        key={`${passenger.seat}-${index}`}
+                        className="border border-gray-200 rounded-lg p-6"
+                      >
+                        <div className="flex items-center space-x-2 mb-4">
+                          <h3 className="text-lg font-semibold">
+                            Passenger {index + 1}
+                          </h3>
+                          <div className="text-sm text-gray-600">
+                            - Seat {passenger.seat}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor={`name-${index}`}>
+                              Name <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              id={`name-${index}`}
+                              value={passenger.name}
+                              onChange={(e) =>
+                                handlePassengerChange(
+                                  index,
+                                  "name",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Enter full name"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor={`age-${index}`}
+                              className="flex items-center space-x-1"
+                            >
+                              <Calendar className="w-4 h-4" />
+                              <span>
+                                Age <span className="text-red-500">*</span>
+                              </span>
+                            </Label>
+                            <Input
+                              id={`age-${index}`}
+                              type="number"
+                              min="1"
+                              max="120"
+                              value={passenger.age || ""}
+                              onChange={(e) =>
+                                handlePassengerChange(
+                                  index,
+                                  "age",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Age"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`gender-${index}`}>Gender</Label>
+                            <Select
+                              value={passenger.gender}
+                              onValueChange={(value) =>
+                                handlePassengerChange(
+                                  index,
+                                  "gender",
+                                  value as "male" | "female"
+                                )
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="male">Male</SelectItem>
+                                <SelectItem value="female">Female</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+                <div className="flex justify-end space-x-4 pt-6 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push("/seat-selection")}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleContinue}
+                    className="bg-primary hover:bg-blue-700"
+                  >
+                    Proceed to Payment
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
-
-          {/* Booking Summary */}
           <div className="lg:col-span-1">
             <Card className="sticky top-8">
               <CardHeader>
                 <CardTitle>Booking Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Trip Details */}
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">
                     Trip Details
@@ -338,50 +363,36 @@ function PassengerInfoContent() {
                     </div>
                   </div>
                 </div>
-
-                {/* Selected Seats */}
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">
                     Selected Seats
                   </h4>
                   <div className="space-y-2">
-                    {state.selectedSeats.map((seat) => (
-                      <div
-                        key={seat.id}
-                        className="flex justify-between items-center text-sm"
-                      >
-                        <span>Seat {seat.number}</span>
-                        <span>
-                          ₦
-                          {(
-                            seat.price || state.selectedTrip!.price
-                          ).toLocaleString()}
-                        </span>
-                      </div>
-                    ))}
+                    {state.selectedSeats
+                      .sort((a, b) => a.number.localeCompare(b.number))
+                      .map((seat) => (
+                        <div
+                          key={seat.id}
+                          className="flex justify-between items-center text-sm"
+                        >
+                          <span>Seat {seat.number}</span>
+                          <span>
+                            ₦{state.selectedTrip?.price.toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
                   </div>
                 </div>
-
-                {/* Total */}
                 <div className="border-t pt-4">
                   <div className="flex justify-between items-center text-lg font-semibold">
                     <span>Total Amount:</span>
                     <span>₦{state.totalAmount.toLocaleString()}</span>
                   </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {state.selectedSeats.length} seat(s) × ₦
+                    {state.selectedTrip.price.toLocaleString()} per seat
+                  </p>
                 </div>
-
-                {/* Continue Button */}
-                <Button
-                  onClick={handleContinue}
-                  className="w-full bg-primary hover:bg-blue-700"
-                >
-                  Proceed to Payment
-                </Button>
-
-                <p className="text-xs text-gray-600 text-center">
-                  By continuing, you agree to our Terms of Service and Privacy
-                  Policy.
-                </p>
               </CardContent>
             </Card>
           </div>

@@ -9,6 +9,8 @@ type User = {
     phone: string;
     createdAt: string;
     isActive: boolean;
+    createdBy: string | null;
+    modifiedBy: string | null;
 };
 
 type SeatLayoutJson = {
@@ -21,7 +23,7 @@ type Seat = {
     id: string;
     number: string;
     isAvailable: boolean;
-    isSelected: boolean; // UI-specific
+    isSelected: boolean;
     type: "regular" | "premium" | "driver";
     price?: number;
 };
@@ -50,13 +52,15 @@ type Trip = {
     bus: Bus;
     createdBy: string;
     modifiedBy: string;
-    duration: string; // e.g., "8h 0m"
+    duration: string;
 };
 
 type Passenger = {
     id: string;
     name: string;
     seat: string;
+    age: number;
+    gender: "male" | "female";
 };
 
 type Booking = {
@@ -86,6 +90,15 @@ type BusType = {
 };
 
 // Input types
+type UserInput = {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    phone: string;
+    isActive?: boolean;
+};
+
 type BusInput = {
     operator: string;
     busType: string;
@@ -114,6 +127,7 @@ type BookingInput = {
     phone: string;
     passengers: { name: string; seat: string }[];
     paymentReference?: string;
+    status: string;
 };
 
 type BusTypeInput = {
@@ -122,13 +136,18 @@ type BusTypeInput = {
 };
 
 // Store interfaces
-interface AuthState {
-    user: User | null;
-    token: string | null;
+interface UserState {
+    users: User[];
+    currentUser: User | null;
     isLoading: boolean;
-    login: (token: string) => Promise<void>;
-    logout: () => void;
-    initAuth: () => Promise<void>;
+    error: string | null;
+    total: number;
+    fetchUsers: (params?: { limit?: number; offset?: number }) => Promise<void>;
+    fetchUser: (userId: string) => Promise<void>;
+    createUser: (data: UserInput) => Promise<User>;
+    updateUser: (userId: string, data: Partial<UserInput>) => Promise<User>;
+    deleteUser: (userId: string) => Promise<void>;
+    clearError: () => void;
 }
 
 interface BusState {
@@ -169,7 +188,20 @@ interface BookingState {
     fetchBookings: (params?: { email?: string; status?: string; limit?: number; offset?: number }) => Promise<void>;
     fetchBooking: (reference: string) => Promise<void>;
     createBooking: (data: BookingInput) => Promise<Booking>;
-    updateBooking: (reference: string, data: { status?: string; email?: string; phone?: string; paymentReference?: string }) => Promise<Booking>;
+    updateBooking: (reference: string, data: {
+        status?: string;
+        email?: string;
+        phone?: string;
+        paymentReference?: string;
+        passengers?: Array<{
+            id?: string;
+            name: string;
+            seat: string;
+            age: number;
+            gender: 'male' | 'female';
+        }>;
+        totalAmount?: number;
+    }) => Promise<Booking>;
     deleteBooking: (reference: string) => Promise<void>;
     clearError: () => void;
 }
@@ -204,39 +236,94 @@ const apiCall = async (url: string, options: RequestInit = {}) => {
     return response.json();
 };
 
-// Auth Store
-export const useAuthStore = create<AuthState>((set) => ({
-    user: null,
-    token: null,
-    isLoading: true,
+// User Store
+export const useUserStore = create<UserState>((set) => ({
+    users: [],
+    currentUser: null,
+    isLoading: false,
+    error: null,
+    total: 0,
 
-    login: async (token: string) => {
-        localStorage.setItem('token', token);
-        const user = await apiCall('/api/auth/me');
-        set({ user, token, isLoading: false });
-    },
-
-    logout: () => {
-        localStorage.removeItem('token');
-        set({ user: null, token: null });
-    },
-
-    initAuth: async () => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            set({ user: null, token: null, isLoading: false });
-            return;
-        }
-
+    fetchUsers: async (params = {}) => {
+        set({ isLoading: true, error: null });
         try {
-            const user = await apiCall('/api/auth/me');
-            set({ user, token, isLoading: false });
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (err) {
-            localStorage.removeItem('token');
-            set({ user: null, token: null, isLoading: false });
+            const queryString = new URLSearchParams(
+                Object.entries(params).reduce((acc, [key, value]) => {
+                    if (value !== undefined) acc[key] = String(value);
+                    return acc;
+                }, {} as Record<string, string>)
+            ).toString();
+
+            const response = await apiCall(`/api/users${queryString ? `?${queryString}` : ''}`);
+            set({ users: response.data, total: response.total, isLoading: false });
+        } catch (error) {
+            set({ error: (error as Error).message, isLoading: false });
         }
     },
+
+    fetchUser: async (userId: string) => {
+        set({ isLoading: true, error: null });
+        try {
+            const user = await apiCall(`/api/users/${userId}`);
+            set({ currentUser: user, isLoading: false });
+        } catch (error) {
+            set({ error: (error as Error).message, isLoading: false });
+        }
+    },
+
+    createUser: async (data: UserInput) => {
+        set({ isLoading: true, error: null });
+        try {
+            const user = await apiCall('/api/users', {
+                method: 'POST',
+                body: JSON.stringify(data),
+            });
+            set(state => ({
+                users: [user, ...state.users],
+                isLoading: false
+            }));
+            return user;
+        } catch (error) {
+            set({ error: (error as Error).message, isLoading: false });
+            throw error;
+        }
+    },
+
+    updateUser: async (userId: string, data: Partial<UserInput>) => {
+        set({ isLoading: true, error: null });
+        try {
+            const updatedUser = await apiCall(`/api/users/${userId}`, {
+                method: 'PATCH',
+                body: JSON.stringify(data),
+            });
+            set(state => ({
+                users: state.users.map(user => user.id === userId ? updatedUser : user),
+                currentUser: state.currentUser?.id === userId ? updatedUser : state.currentUser,
+                isLoading: false
+            }));
+            return updatedUser;
+        } catch (error) {
+            set({ error: (error as Error).message, isLoading: false });
+            throw error;
+        }
+    },
+
+    deleteUser: async (userId: string) => {
+        set({ isLoading: true, error: null });
+        try {
+            await apiCall(`/api/users/${userId}`, { method: 'DELETE' });
+            set(state => ({
+                users: state.users.filter(user => user.id !== userId),
+                currentUser: state.currentUser?.id === userId ? null : state.currentUser,
+                isLoading: false
+            }));
+        } catch (error) {
+            set({ error: (error as Error).message, isLoading: false });
+            throw error;
+        }
+    },
+
+    clearError: () => set({ error: null }),
 }));
 
 // Bus Store
@@ -396,7 +483,8 @@ export const useTripStore = create<TripState>((set) => ({
                 isLoading: false
             }));
             return updatedTrip;
-        } catch (error) {
+        }
+        catch (error) {
             set({ error: (error as Error).message, isLoading: false });
             throw error;
         }
@@ -473,7 +561,20 @@ export const useBookingStore = create<BookingState>((set) => ({
         }
     },
 
-    updateBooking: async (reference: string, data: { status?: string; email?: string; phone?: string; paymentReference?: string }) => {
+    updateBooking: async (reference: string, data: {
+        status?: string;
+        email?: string;
+        phone?: string;
+        paymentReference?: string;
+        passengers?: Array<{
+            id?: string;
+            name: string;
+            seat: string;
+            age: number;
+            gender: 'male' | 'female';
+        }>;
+        totalAmount?: number;
+    }) => {
         set({ isLoading: true, error: null });
         try {
             const updatedBooking = await apiCall(`/api/bookings/${reference}`, {

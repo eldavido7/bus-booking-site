@@ -60,6 +60,8 @@ export async function GET(request: NextRequest) {
                     id: p.id,
                     name: p.name,
                     seat: p.seat,
+                    age: p.age,
+                    gender: p.gender,
                 })),
                 email: booking.email,
                 phone: booking.phone,
@@ -147,13 +149,19 @@ export async function POST(request: NextRequest) {
 
         const availableSeats = trip.bus.seats.filter((seat) => seat.isAvailable).map((seat) => seat.number);
         for (const passenger of passengers) {
-            if (!passenger.name || !passenger.seat) {
-                return NextResponse.json({ error: { code: 400, message: 'Passenger name and seat are required' } }, { status: 400 });
+            if (!passenger.name || !passenger.seat || typeof passenger.age !== 'number' || passenger.age <= 0 || !passenger.gender) {
+                return NextResponse.json({
+                    error: { code: 400, message: 'Each passenger must have name, seat, age, and gender' }
+                }, { status: 400 });
             }
+
             if (!availableSeats.includes(passenger.seat)) {
-                return NextResponse.json({ error: { code: 400, message: `Seat ${passenger.seat} is unavailable or invalid` } }, { status: 400 });
+                return NextResponse.json({
+                    error: { code: 400, message: `Seat ${passenger.seat} is unavailable or invalid` }
+                }, { status: 400 });
             }
         }
+
 
         // Calculate total amount
         const totalAmount = passengers.length * trip.price;
@@ -166,7 +174,7 @@ export async function POST(request: NextRequest) {
             const createdBooking = await tx.booking.create({
                 data: {
                     reference,
-                    status: paymentReference ? 'confirmed' : 'pending',
+                    status: 'confirmed',
                     tripId,
                     busId: trip.busId,
                     from: trip.from,
@@ -178,6 +186,8 @@ export async function POST(request: NextRequest) {
                         create: passengers.map((p) => ({
                             name: p.name,
                             seat: p.seat,
+                            age: p.age,
+                            gender: p.gender,
                         })),
                     },
                     email,

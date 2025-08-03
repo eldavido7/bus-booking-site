@@ -1,18 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "../../components/ui/dialog";
-import { Booking, useBooking } from "../../context/BookingContext";
+} from "../ui/dialog";
 import { toast } from "sonner";
+import { useBookingStore } from "../../lib/store/store";
+import { Booking } from "../../shared/types";
 
 interface EditBookingModalProps {
   isOpen: boolean;
@@ -25,140 +33,158 @@ export default function EditBookingModal({
   onClose,
   booking,
 }: EditBookingModalProps) {
-  const { dispatch } = useBooking();
+  const { updateBooking } = useBookingStore();
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
-    email: booking.contact.email,
-    phone: booking.contact.phone,
-    passengers: booking.passengers.map((p) => ({ ...p })),
+    status: "",
+    email: "", // Move email/phone to root level
+    phone: "",
+    paymentReference: "",
+    passengers: [] as Array<{
+      id: string;
+      name: string;
+      seat: string;
+      age: number;
+      gender: "male" | "female";
+    }>,
   });
 
-  const handleChange = (
-    field: "email" | "phone" | "passenger",
-    index?: number,
-    value?: string
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    index: number,
+    field: string
   ) => {
-    if (field === "passenger" && index !== undefined && value !== undefined) {
-      const updatedPassengers = [...formData.passengers];
-      updatedPassengers[index].name = value;
-      setFormData({ ...formData, passengers: updatedPassengers });
-    } else {
-      setFormData({ ...formData, [field]: value });
-    }
+    const newPassengers = [...formData.passengers];
+    newPassengers[index] = { ...newPassengers[index], [field]: e.target.value };
+    setFormData((prev) => ({ ...prev, passengers: newPassengers }));
   };
 
-  const handleSave = () => {
-    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      toast.error("Please enter a valid email address");
-      return;
-    }
-    if (!formData.phone || !/^(\+234|0)[789]\d{9}$/.test(formData.phone)) {
-      toast.error("Please enter a valid Nigerian phone number");
-      return;
-    }
-    if (formData.passengers.some((p) => !p.name)) {
-      toast.error("Please provide names for all passengers");
-      return;
-    }
-
-    dispatch({
-      type: "ADD_BOOKING",
-      payload: {
-        ...booking,
-        contact: { email: formData.email, phone: formData.phone },
-        passengers: formData.passengers,
-      },
-    });
-    toast.success(`Booking ${booking.reference} updated successfully`);
-    onClose();
+  const handleStatusChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, status: value as Booking["status"] }));
   };
 
-  const handleCancelBooking = () => {
-    dispatch({
-      type: "CANCEL_BOOKING",
-      payload: {
-        reference: booking.reference,
-        busId: booking.busId,
-        seatNumbers: booking.passengers.map((p) => p.seat),
-      },
-    });
-    toast.success(`Booking ${booking.reference} has been cancelled`);
-    onClose();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      if (
+        !formData.passengers.every((p) => p.name && p.seat) ||
+        !formData.email ||
+        !formData.phone
+      ) {
+        toast.error("Please fill in all required fields");
+        return;
+      }
+      await updateBooking(booking.reference, {
+        status: formData.status,
+        email: formData.email,
+        phone: formData.phone,
+        paymentReference: formData.paymentReference,
+      });
+      toast.success("Booking updated successfully");
+      onClose();
+    } catch (error) {
+      toast.error("Failed to update booking", {
+        description: (error as Error).message,
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Edit Booking - {booking.reference}</DialogTitle>
+          <DialogTitle>Edit Booking</DialogTitle>
         </DialogHeader>
-        <div className="space-y-6">
-          {/* Contact Information */}
-          <div>
-            <h3 className="text-lg font-semibold mb-2">Contact Information</h3>
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    handleChange("email", undefined, e.target.value)
-                  }
-                  placeholder="Enter email"
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) =>
-                    handleChange("phone", undefined, e.target.value)
-                  }
-                  placeholder="Enter phone number"
-                />
-              </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={handleStatusChange}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-
-          {/* Passenger Information */}
-          <div>
-            <h3 className="text-lg font-semibold mb-2">
-              Passenger Information
-            </h3>
             {formData.passengers.map((passenger, index) => (
-              <div key={index} className="flex items-center space-x-4 mb-2">
-                <div className="flex-1">
-                  <Label htmlFor={`passenger-${index}`}>
-                    Passenger {index + 1} Name
-                  </Label>
-                  <Input
-                    id={`passenger-${index}`}
-                    value={passenger.name}
-                    onChange={(e) =>
-                      handleChange("passenger", index, e.target.value)
-                    }
-                    placeholder="Enter passenger name"
-                  />
-                </div>
-                <div className="mt-6">
-                  <span className="text-sm">Seat: {passenger.seat}</span>
+              <div key={index} className="border p-4 rounded-lg">
+                <h4 className="font-semibold">Passenger {index + 1}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                  <div>
+                    <Label htmlFor={`name-${index}`}>Name</Label>
+                    <Input
+                      id={`name-${index}`}
+                      value={passenger.name}
+                      onChange={(e) => handleInputChange(e, index, "name")}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`email-${index}`}>Email</Label>
+                    <Input
+                      id={`email-${index}`}
+                      type="email"
+                      value={booking.email}
+                      onChange={(e) => handleInputChange(e, index, "email")}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`phone-${index}`}>Phone</Label>
+                    <Input
+                      id={`phone-${index}`}
+                      value={booking.phone}
+                      onChange={(e) => handleInputChange(e, index, "phone")}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`seatNumber-${index}`}>Seat Number</Label>
+                    <Input
+                      id={`seatNumber-${index}`}
+                      type="number"
+                      value={passenger.seat}
+                      onChange={(e) =>
+                        handleInputChange(e, index, "seatNumber")
+                      }
+                      required
+                    />
+                  </div>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
-          {booking.status === "confirmed" && (
-            <Button variant="destructive" onClick={handleCancelBooking}>
-              Cancel Booking
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSaving}
+            >
+              Cancel
             </Button>
-          )}
-          <Button onClick={handleSave}>Save Changes</Button>
-        </DialogFooter>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Saving...</span>
+                </div>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
