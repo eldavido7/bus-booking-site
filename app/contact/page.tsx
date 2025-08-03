@@ -37,7 +37,6 @@ export default function Contact() {
       return;
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       toast.error("Please enter a valid email address");
@@ -47,13 +46,23 @@ export default function Contact() {
     setIsSubmitting(true);
 
     try {
-      // Simulate form submission
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // THIS IS THE CHANGE: Call the new API endpoint
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Something went wrong");
+      }
 
       toast.success(
         "Message sent successfully! We'll get back to you within 24 hours."
       );
-      setFormData({ name: "", email: "", message: "" });
+      setFormData({ name: "", email: "", message: "" }); // Clear the form
     } catch (error: unknown) {
       toast.error("Failed to send message. Please try again.", {
         description: (error as Error).message,
