@@ -81,7 +81,12 @@ function SearchResultsContent() {
 
   const handleSelectTrip = (trip: Trip) => {
     dispatch({ type: "SET_SELECTED_TRIP", payload: trip });
-    dispatch({ type: "SET_SELECTED_BUS", payload: trip.bus });
+
+    // Only dispatch if bus exists
+    if (trip.bus) {
+      dispatch({ type: "SET_SELECTED_BUS", payload: trip.bus });
+    }
+
     dispatch({ type: "SET_STEP", payload: 3 });
     router.push("/seat-selection");
   };
@@ -175,22 +180,22 @@ function SearchResultsContent() {
                         <div className="flex items-center justify-between mb-4">
                           <div>
                             <h3 className="text-xl font-semibold text-gray-900">
-                              {bus.operator}
+                              {bus?.operator}
                             </h3>
                             <div className="flex items-center space-x-1 mt-1">
                               <Star className="w-4 h-4 text-yellow-400 fill-current" />
                               <span className="text-sm text-gray-600">
-                                {bus.rating}
+                                {bus?.rating}
                               </span>
                               <Badge
                                 variant={
-                                  bus.busType === "Luxury"
+                                  bus?.busType === "Luxury"
                                     ? "default"
                                     : "normal"
                                 }
                                 className="ml-2"
                               >
-                                {bus.busType}
+                                {bus?.busType}
                               </Badge>
                             </div>
                           </div>
@@ -225,7 +230,7 @@ function SearchResultsContent() {
 
                         {/* Amenities */}
                         <div className="flex flex-wrap gap-2">
-                          {bus.amenities.map((amenity) => {
+                          {bus?.amenities.map((amenity) => {
                             const IconComponent =
                               amenityIcons[
                                 amenity as keyof typeof amenityIcons
@@ -250,7 +255,7 @@ function SearchResultsContent() {
                             Available Seats
                           </div>
                           <div className="text-lg font-semibold text-green-600">
-                            {availableSeats(bus)} seats
+                            {trip.bus ? availableSeats(trip.bus) : 0} seats
                           </div>
                         </div>
                       </div>
@@ -272,10 +277,13 @@ function SearchResultsContent() {
                           onClick={() => handleSelectTrip(trip)}
                           className="w-full lg:w-auto bg-primary hover:bg-blue-700"
                           disabled={
-                            availableSeats(bus) < state.searchData.passengers
+                            !trip.bus ||
+                            availableSeats(trip.bus) <
+                              state.searchData.passengers
                           }
                         >
-                          {availableSeats(bus) < state.searchData.passengers
+                          {!trip.bus ||
+                          availableSeats(trip.bus) < state.searchData.passengers
                             ? "Not Available"
                             : "Select Seats"}
                         </Button>

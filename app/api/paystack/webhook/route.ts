@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { kv } from '@vercel/kv';
 import { BookingInput } from '../../../../lib/types';
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || 'sk_test_default_key';
@@ -43,6 +44,43 @@ export async function POST(request: NextRequest) {
                 console.error('Payment not successful:', status);
                 return NextResponse.json({ error: 'Payment not successful' }, { status: 400 });
             }
+
+            // ENHANCED DUPLICATE PREVENTION with Vercel KV
+            const paystackReference = reference;
+            const bookingReference = metadata?.bookingReference;
+
+            // Create unique identifiers for this webhook
+            const webhookIdentifiers = [
+                `webhook:paystack:${paystackReference}`,
+                `webhook:booking:${bookingReference}`,
+                `webhook:combined:${paystackReference}-${bookingReference}`,
+            ].filter(Boolean);
+
+            // Check if any identifier has been processed
+            const checkPromises = webhookIdentifiers.map(id => kv.get(id));
+            const processedChecks = await Promise.all(checkPromises);
+            const alreadyProcessed = processedChecks.some(result => result !== null);
+
+            if (alreadyProcessed) {
+                console.log('Webhook already processed, identifiers:', webhookIdentifiers);
+                return NextResponse.json({
+                    message: 'Webhook already processed (duplicate prevention)',
+                    bookingReference,
+                    paystackReference,
+                    processed: true
+                }, { status: 200 });
+            }
+
+            // Mark all identifiers as processed (expire after 24 hours)
+            const markPromises = webhookIdentifiers.map(id =>
+                kv.set(id, {
+                    processed: true,
+                    timestamp: new Date().toISOString(),
+                    paystackReference,
+                    bookingReference
+                }, { ex: 86400 }) // 24 hours expiry
+            );
+            await Promise.all(markPromises);
 
             if (!metadata) {
                 console.error('No metadata found in webhook data');
@@ -93,10 +131,6 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: `Amount mismatch: expected ${amount / 100}, got ${metadata.totalAmount}` }, { status: 400 });
             }
 
-            // Use our booking reference (from metadata) for checking existing bookings
-            // Since that's what we use to navigate and what the user sees
-            const bookingReference = metadata.bookingReference;
-            const paystackReference = reference; // This is Paystack's transaction reference
             console.log('Using booking reference for lookup:', bookingReference, 'Paystack reference:', paystackReference);
 
             // Check for existing booking using our booking reference
@@ -146,8 +180,8 @@ export async function POST(request: NextRequest) {
                     age: Number(p.age),
                     gender: p.gender,
                 })),
-                paymentReference: paystackReference, // This is the Paystack transaction reference
-                reference: bookingReference, // This is our booking reference (what user sees and uses to navigate)
+                paymentReference: paystackReference,
+                reference: bookingReference,
             };
 
             const apiUrl = `${baseUrl}/api/bookings`;
@@ -188,7 +222,7 @@ export async function POST(request: NextRequest) {
 
             return NextResponse.json({
                 message: 'Webhook processed successfully',
-                bookingReference: bookingResponse.reference // Return the actual reference from the booking API
+                bookingReference: bookingResponse.reference
             }, { status: 200 });
         }
 
