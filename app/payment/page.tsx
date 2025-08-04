@@ -261,7 +261,7 @@ function PaymentContent() {
             </h2>
             <p className="text-gray-600 mb-4">
               {isCreatingBooking
-                ? "Creating your booking... Please wait."
+                ? "Creating your booking... Please wait, and do not close this page."
                 : "Your booking has been confirmed. Redirecting to confirmation page..."}
             </p>
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>

@@ -13,7 +13,6 @@ import {
 } from "../../../../../components/ui/card";
 import { ArrowLeft, User, Save, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import Image from "next/image";
 import { useAuthStore } from "../../../../../lib/store/authStore";
 import { useUserStore } from "../../../../../lib/store/store";
 
@@ -108,14 +107,6 @@ export default function CreateUser() {
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back to Users</span>
               </Button>
-              <div className="flex items-center space-x-2">
-                <Image
-                  src="/logo.png"
-                  alt="TravelEase Logo"
-                  width={128}
-                  height={128}
-                />
-              </div>
             </div>
           </div>
         </div>

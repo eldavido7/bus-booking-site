@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../../../components/ui/button";
 import {
@@ -18,6 +18,8 @@ import {
   MapPin,
   Calendar,
   Book,
+  Menu,
+  X,
 } from "lucide-react";
 import Image from "next/image";
 import { useAuthStore } from "../../../lib/store/authStore";
@@ -38,6 +40,7 @@ export default function AdminDashboard() {
     fetchBookings,
     isLoading: bookingLoading,
   } = useBookingStore();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // This single effect now safely fetches data only when the user is available.
   useEffect(() => {
@@ -118,42 +121,119 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-4">
+              <div className="md:flex hidden items-center space-x-4">
+                <Button
+                  onClick={() => router.push("/admin/buses")}
+                  className="bg-primary hover:bg-blue-700"
+                >
+                  <Bus className="w-4 h-4 mr-2" />
+                  Buses
+                </Button>
+                <Button
+                  onClick={() => router.push("/admin/trips")}
+                  className="bg-primary hover:bg-blue-700"
+                >
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Trips
+                </Button>
+                <Button
+                  onClick={() => router.push("/admin/bookings")}
+                  className="bg-primary hover:bg-blue-700"
+                >
+                  <Book className="w-4 h-4 mr-2" />
+                  Bookings
+                </Button>
+                <Button
+                  onClick={() => router.push("/admin/users")}
+                  variant="outline"
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Users
+                </Button>
+                <Button onClick={handleLogout} variant="outline">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </Button>
+              </div>
+            </div>
+
+            {/* Mobile Menu Button - Visible on mobile */}
+            <div className="md:hidden">
               <Button
-                onClick={() => router.push("/admin/buses")}
-                className="bg-primary hover:bg-blue-700"
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              >
+                {isMobileMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden absolute w-full bg-white border-t z-50">
+            <div className="px-4 py-2 space-y-2">
+              <Button
+                onClick={() => {
+                  router.push("/admin/buses");
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full justify-start"
+                variant="ghost"
               >
                 <Bus className="w-4 h-4 mr-2" />
                 Buses
               </Button>
               <Button
-                onClick={() => router.push("/admin/trips")}
-                className="bg-primary hover:bg-blue-700"
+                onClick={() => {
+                  router.push("/admin/trips");
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full justify-start"
+                variant="ghost"
               >
                 <MapPin className="w-4 h-4 mr-2" />
                 Trips
               </Button>
               <Button
-                onClick={() => router.push("/admin/bookings")}
-                className="bg-primary hover:bg-blue-700"
+                onClick={() => {
+                  router.push("/admin/bookings");
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full justify-start"
+                variant="ghost"
               >
                 <Book className="w-4 h-4 mr-2" />
                 Bookings
               </Button>
               <Button
-                onClick={() => router.push("/admin/users")}
-                variant="outline"
+                onClick={() => {
+                  router.push("/admin/users");
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full justify-start"
+                variant="ghost"
               >
                 <Users className="w-4 h-4 mr-2" />
                 Users
               </Button>
-              <Button onClick={handleLogout} variant="outline">
+              <Button
+                onClick={handleLogout}
+                className="w-full justify-start"
+                variant="ghost"
+              >
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
               </Button>
             </div>
           </div>
-        </div>
+        )}
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -249,7 +329,7 @@ export default function AdminDashboard() {
                     className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
                   >
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <div className="w-12 h-12 bg-blue-100 rounded-lg hidden md:flex items-center justify-center">
                         <MapPin className="w-6 h-6 text-primary" />
                       </div>
                       <div>
@@ -263,13 +343,13 @@ export default function AdminDashboard() {
                               {new Date(trip.date).toLocaleDateString()}
                             </span>
                           </span>
-                          <span className="flex items-center space-x-1">
+                          <span className="hidden md:flex items-center space-x-1">
                             <MapPin className="w-3 h-3" />
                             <span>
                               {trip.departureTime} - {trip.arrivalTime}
                             </span>
                           </span>
-                          <span className="flex items-center space-x-1">
+                          <span className="hidden md:flex items-center space-x-1">
                             <Users className="w-3 h-3" />
                             <span>
                               {bus
@@ -282,16 +362,11 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
-                      <Badge
-                        variant={
-                          bus?.busType.toLowerCase() === "luxury"
-                            ? "default"
-                            : "normal"
-                        }
-                      >
-                        {bus?.busType.toLowerCase() === "luxury"
-                          ? "Luxury"
-                          : "Standard"}
+                      <Badge variant="default">
+                        {bus?.busType
+                          ? bus.busType.charAt(0).toUpperCase() +
+                            bus.busType.slice(1).toLowerCase()
+                          : "Unknown"}
                       </Badge>
                       <div className="text-right">
                         <div className="font-semibold text-gray-900">

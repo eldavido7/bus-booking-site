@@ -20,6 +20,8 @@ import {
   MapPin,
   Users,
   Calendar,
+  Menu,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 // import EditBusModal from "../../../components/modals/EditBusModal";
@@ -69,6 +71,7 @@ export default function BusesPage() {
   const [availabilityTrip, setAvailabilityTrip] = useState<Trip | null>(null);
   const [isDeleting, setIsDeleting] = useState(false); // <-- Add a local loading state for delete
   const [isSavingEdit] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Map store data to BookingContext types
   const buses: Buss[] = storeBuses.map((bus) => ({
@@ -210,25 +213,72 @@ export default function BusesPage() {
               className="flex items-center space-x-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Back to Dashboard</span>
+              <span className="hidden md:flex">Back to Dashboard</span>
             </Button>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="md:text-2xl text-lg font-bold text-gray-900">
               Bus Fleet Management
             </h1>
           </div>
-          <div className="space-x-2">
+          <div className="flex items-center gap-2 relative">
+            {/* Desktop buttons */}
+            <div className="hidden md:flex space-x-2">
+              <Button
+                onClick={() => router.push("/admin/buses/bus-types")}
+                className="bg-primary hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Manage Bus Types
+              </Button>
+              <Button
+                onClick={() => router.push("/admin/buses/create")}
+                className="bg-primary hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Add New Bus
+              </Button>
+            </div>
+
+            {/* Mobile menu */}
             <Button
-              onClick={() => router.push("/admin/buses/bus-types")}
-              className="bg-primary hover:bg-blue-700"
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
-              <Plus className="w-4 h-4 mr-2" /> Manage Bus Types
+              {isMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
             </Button>
-            <Button
-              onClick={() => router.push("/admin/buses/create")}
-              className="bg-primary hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4 mr-2" /> Add New Bus
-            </Button>
+
+            {/* Mobile dropdown */}
+            {isMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white border rounded-lg shadow-lg z-50">
+                <div className="p-2 space-y-2">
+                  <Button
+                    onClick={() => {
+                      router.push("/admin/buses/bus-types");
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full justify-start"
+                    variant="ghost"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Manage Types
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      router.push("/admin/buses/create");
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full justify-start"
+                    variant="ghost"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Bus
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -252,7 +302,7 @@ export default function BusesPage() {
                 <div className="space-y-4">
                   {buses.map((bus) => (
                     <div key={bus.id} className="p-4 border rounded-lg">
-                      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4">
+                      <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between mb-4">
                         <div className="flex items-center space-x-4 flex-1">
                           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
                             <Bus className="w-6 h-6 text-primary" />
@@ -266,21 +316,16 @@ export default function BusesPage() {
                                 <Users className="w-3 h-3" />
                                 <span>{bus.seats.length} seats</span>
                               </span>
-                              <Badge
-                                variant={
-                                  bus.busType.toLowerCase() === "luxury"
-                                    ? "default"
-                                    : "normal"
-                                }
-                              >
-                                {bus.busType.toLowerCase() === "luxury"
-                                  ? "Luxury"
-                                  : "Standard"}
+                              <Badge variant="default">
+                                {bus.busType.charAt(0).toUpperCase() +
+                                  bus.busType.slice(1).toLowerCase()}
                               </Badge>
                             </div>
                           </div>
                         </div>
-                        <div className="relative">
+
+                        {/* Menu button - absolute on mobile, normal on desktop */}
+                        <div className="md:relative absolute right-0 top-0 mt-2 md:mt-0 flex items-start">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -308,6 +353,7 @@ export default function BusesPage() {
                           )}
                         </div>
                       </div>
+
                       <div className="mt-4">
                         <h4 className="text-sm font-semibold text-gray-900 mb-2">
                           Assigned Trips

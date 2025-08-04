@@ -182,9 +182,9 @@ export default function BookingsPage() {
               className="flex items-center space-x-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Back to Dashboard</span>
+              <span className="hidden md:flex">Back to Dashboard</span>
             </Button>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="md:text-2xl text-lg font-bold text-gray-900">
               Bookings Management
             </h1>
           </div>
@@ -224,11 +224,6 @@ export default function BookingsPage() {
                 </Button>
               )}
             </div>
-            {/* {searchResult === null && searchReference && !isSearching && (
-              <p className="text-sm text-red-600 mt-2">
-                No booking found with reference {searchReference}
-              </p>
-            )} */}
           </CardContent>
         </Card>
 

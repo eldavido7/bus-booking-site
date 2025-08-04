@@ -147,7 +147,7 @@ function SeatSelectionContent() {
             </div>
           ))}
         </div>
-        <div className="mt-6 pt-4 border-t border-gray-200 flex items-center justify-center gap-6 text-xs">
+        <div className="mt-6 pt-4 border-t border-gray-200 md:flex grid grid-cols-2 items-center justify-center gap-6 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-green-50 border border-green-300 rounded" />
             <span>Available</span>
@@ -205,13 +205,7 @@ function SeatSelectionContent() {
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span className="text-xl font-medium">Select Your Seats</span>
-                  <Badge
-                    variant={
-                      state.selectedBus.busType === "Luxury"
-                        ? "default"
-                        : "normal"
-                    }
-                  >
+                  <Badge variant="default">
                     {state.selectedBus.operator} - {state.selectedBus.busType}
                   </Badge>
                 </CardTitle>

@@ -88,7 +88,7 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
           </div>
         ))}
       </div>
-      <div className="mt-6 pt-4 border-t border-gray-200 flex items-center justify-center gap-6 text-xs">
+      <div className="mt-6 pt-4 border-t border-gray-200 md:flex grid grid-cols-2 items-center justify-center gap-6 text-xs">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-green-50 border border-green-300 rounded" />
           <span>Available</span>

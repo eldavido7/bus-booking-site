@@ -23,7 +23,6 @@ import { ArrowLeft, Bus, Save } from "lucide-react";
 import { toast } from "sonner";
 import { useBusStore, useBusTypeStore } from "../../../../../lib/store/store";
 import { Bus as Buss, Seat, SeatLayoutJson } from "../../../../../shared/types";
-import Image from "next/image";
 import BusLayoutBuilder from "../../../../../components/ui/BusLayoutBuilder"; // Import the new component
 import { useAuthStore } from "lib/store/authStore";
 
@@ -188,14 +187,14 @@ export default function CreateBus() {
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back to Buses</span>
               </Button>
-              <div className="flex items-center space-x-2">
+              {/* <div className="flex items-center space-x-2">
                 <Image
                   src="/logo.png"
                   alt="TravelEase Logo"
                   width={128}
                   height={128}
                 />
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

@@ -100,7 +100,7 @@ function BookingConfirmationContent() {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       const canvas = await html2canvas(ticketRef.current, {
-        scale: 2,
+        scale: 3,
         useCORS: true,
         width: 800,
         height: ticketRef.current.scrollHeight,
@@ -108,7 +108,7 @@ function BookingConfirmationContent() {
         windowHeight: ticketRef.current.scrollHeight,
       });
 
-      const imgData = canvas.toDataURL("image/png");
+      const imgData = canvas.toDataURL("image/jpeg", 1.0);
       const pdf = new jsPDF("p", "mm", "a4");
       const imgWidth = 190;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
@@ -181,8 +181,9 @@ function BookingConfirmationContent() {
             Booking Confirmed!
           </h1>
           <p className="text-xl text-gray-600">
-            Your bus ticket has been successfully booked. We&apos;ve sent the
-            confirmation details to your email.
+            Your bus ticket has been successfully booked. Please download your
+            ticket below, and use the reference number to find your booking
+            later.
           </p>
         </div>
 
@@ -195,8 +196,8 @@ function BookingConfirmationContent() {
                     <Image
                       src="/logowhite.png"
                       alt="TravelEase Logo"
-                      width={96}
-                      height={96}
+                      width={120}
+                      height={120}
                       className="logo-text"
                     />
                   </div>

@@ -19,7 +19,7 @@ import {
   CardTitle,
 } from "../../components/ui/card";
 import { useBooking, Passenger } from "../../context/BookingContext";
-import { ArrowLeft, Mail, Phone, Calendar } from "lucide-react";
+import { ArrowLeft, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 
@@ -261,11 +261,8 @@ function PassengerInfoContent() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label
-                              htmlFor={`age-${index}`}
-                              className="flex items-center space-x-1"
-                            >
-                              <Calendar className="w-4 h-4" />
+                            <Label htmlFor={`age-${index}`}>
+                              {/* <Calendar className="w-4 h-4" /> */}
                               <span>
                                 Age <span className="text-red-500">*</span>
                               </span>
