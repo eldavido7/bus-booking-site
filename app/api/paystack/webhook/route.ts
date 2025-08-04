@@ -1,8 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { createClient } from 'redis';
 import { BookingInput } from '../../../../lib/types';
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || 'sk_test_default_key';
+
+// Create Redis client
+const redis = createClient({
+    url: process.env.REDIS_URL,
+});
+
+// Global connection state
+let isConnected = false;
+
+async function ensureRedisConnection() {
+    if (!isConnected) {
+        try {
+            await redis.connect();
+            isConnected = true;
+            console.log('Redis connected successfully');
+        } catch (error) {
+            console.error('Redis connection failed:', error);
+            throw error;
+        }
+    }
+}
 
 export async function GET() {
     console.log('Webhook endpoint GET request received');
@@ -16,6 +38,9 @@ export async function GET() {
 export async function POST(request: NextRequest) {
     console.log('=== PAYSTACK WEBHOOK RECEIVED ===', new Date().toISOString());
     try {
+        // Ensure Redis connection
+        await ensureRedisConnection();
+
         const rawBody = await request.text();
         console.log('Webhook raw body:', rawBody);
 
@@ -43,6 +68,46 @@ export async function POST(request: NextRequest) {
                 console.error('Payment not successful:', status);
                 return NextResponse.json({ error: 'Payment not successful' }, { status: 400 });
             }
+
+            const paystackReference = reference;
+            const bookingReference = metadata?.bookingReference;
+
+            // Create unique identifiers for this webhook
+            const webhookKeys = [
+                `webhook:paystack:${paystackReference}`,
+                `webhook:booking:${bookingReference}`,
+                `webhook:combined:${paystackReference}-${bookingReference}`,
+            ];
+
+            // Check if any identifier has been processed
+            const processedChecks = await Promise.all(
+                webhookKeys.map(key => redis.get(key))
+            );
+            const alreadyProcessed = processedChecks.some(result => result !== null);
+
+            if (alreadyProcessed) {
+                console.log('Webhook already processed, keys:', webhookKeys);
+                return NextResponse.json({
+                    message: 'Webhook already processed (duplicate prevention)',
+                    bookingReference,
+                    paystackReference,
+                    processed: true
+                }, { status: 200 });
+            }
+
+            // Mark all identifiers as processed immediately (expire after 24 hours)
+            await Promise.all(
+                webhookKeys.map(key =>
+                    redis.setEx(key, 86400, JSON.stringify({
+                        processed: true,
+                        timestamp: new Date().toISOString(),
+                        paystackReference,
+                        bookingReference
+                    }))
+                )
+            );
+
+            console.log('Marked webhook as processed, proceeding with validation');
 
             if (!metadata) {
                 console.error('No metadata found in webhook data');
@@ -93,44 +158,51 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: `Amount mismatch: expected ${amount / 100}, got ${metadata.totalAmount}` }, { status: 400 });
             }
 
-            // Use our booking reference (from metadata) for checking existing bookings
-            // Since that's what we use to navigate and what the user sees
-            const bookingReference = metadata.bookingReference;
-            const paystackReference = reference; // This is Paystack's transaction reference
             console.log('Using booking reference for lookup:', bookingReference, 'Paystack reference:', paystackReference);
 
             // Check for existing booking using our booking reference
             const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
             const checkPaymentUrl = `${baseUrl}/api/bookings/check-payment?reference=${bookingReference}`;
             console.log('Checking for existing booking:', checkPaymentUrl);
+            console.log('Base URL being used:', baseUrl);
 
             const checkResponse = await fetch(checkPaymentUrl, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' },
             });
 
+            console.log('Check payment response status:', checkResponse.status);
+            console.log('Check payment response headers:', Object.fromEntries(checkResponse.headers.entries()));
+
+            const responseText = await checkResponse.text();
+            console.log('Check payment raw response:', responseText);
+
             let checkData;
             try {
-                checkData = await checkResponse.json();
+                checkData = JSON.parse(responseText);
             } catch (error) {
                 console.error('Failed to parse check payment response:', error);
-                return NextResponse.json({ error: 'Failed to parse payment check response' }, { status: 500 });
+                console.error('Response was HTML/non-JSON:', responseText.substring(0, 200));
+
+                // If we can't parse the response, assume no booking exists and continue
+                console.log('Assuming no existing booking due to parse error, continuing...');
+                checkData = { exists: false };
             }
-            console.log('Check payment response:', checkData);
+            console.log('Check payment parsed data:', checkData);
 
             // If booking exists, return success to prevent duplicate
             if (checkResponse.ok && checkData.exists) {
                 console.log(`Booking already exists for booking reference ${bookingReference}:`, checkData.booking);
                 return NextResponse.json({
                     message: 'Booking already processed',
-                    bookingReference: checkData.booking.reference
+                    bookingReference: checkData.booking?.reference || bookingReference
                 }, { status: 200 });
             }
 
-            // If 404, no booking exists, proceed to create
-            if (checkResponse.status === 404) {
+            // If 404 or parse error, no booking exists, proceed to create
+            if (checkResponse.status === 404 || !checkData.exists) {
                 console.log(`No booking found for booking reference ${bookingReference}, proceeding to create`);
-            } else if (!checkResponse.ok) {
+            } else if (!checkResponse.ok && checkData.error) {
                 // Handle unexpected errors from check-payment
                 console.error('Unexpected error checking payment:', checkData);
                 return NextResponse.json({ error: `Unexpected error checking payment: ${checkData.error?.message || 'Unknown error'}` }, { status: 500 });
@@ -161,7 +233,7 @@ export async function POST(request: NextRequest) {
             });
 
             console.log('Booking API response status:', bookingRes.status);
-            const responseText = await bookingRes.text();
+            // const responseText = await bookingRes.text();
             console.log('Booking API response body:', responseText);
 
             if (!bookingRes.ok) {
