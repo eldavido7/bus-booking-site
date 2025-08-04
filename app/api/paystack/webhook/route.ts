@@ -1,9 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { kv } from '@vercel/kv';
+import Redis from 'redis';
 import { BookingInput } from '../../../../lib/types';
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || 'sk_test_default_key';
+
+// Create Redis client
+const redis = Redis.createClient({
+    url: process.env.REDIS_URL,
+});
+
+// Global connection state
+let isConnected = false;
+
+async function ensureRedisConnection() {
+    if (!isConnected) {
+        try {
+            await redis.connect();
+            isConnected = true;
+            console.log('Redis connected successfully');
+        } catch (error) {
+            console.error('Redis connection failed:', error);
+            throw error;
+        }
+    }
+}
 
 export async function GET() {
     console.log('Webhook endpoint GET request received');
@@ -17,6 +38,9 @@ export async function GET() {
 export async function POST(request: NextRequest) {
     console.log('=== PAYSTACK WEBHOOK RECEIVED ===', new Date().toISOString());
     try {
+        // Ensure Redis connection
+        await ensureRedisConnection();
+
         const rawBody = await request.text();
         console.log('Webhook raw body:', rawBody);
 
@@ -45,24 +69,24 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: 'Payment not successful' }, { status: 400 });
             }
 
-            // ENHANCED DUPLICATE PREVENTION with Vercel KV
             const paystackReference = reference;
             const bookingReference = metadata?.bookingReference;
 
             // Create unique identifiers for this webhook
-            const webhookIdentifiers = [
+            const webhookKeys = [
                 `webhook:paystack:${paystackReference}`,
                 `webhook:booking:${bookingReference}`,
                 `webhook:combined:${paystackReference}-${bookingReference}`,
-            ].filter(Boolean);
+            ];
 
             // Check if any identifier has been processed
-            const checkPromises = webhookIdentifiers.map(id => kv.get(id));
-            const processedChecks = await Promise.all(checkPromises);
+            const processedChecks = await Promise.all(
+                webhookKeys.map(key => redis.get(key))
+            );
             const alreadyProcessed = processedChecks.some(result => result !== null);
 
             if (alreadyProcessed) {
-                console.log('Webhook already processed, identifiers:', webhookIdentifiers);
+                console.log('Webhook already processed, keys:', webhookKeys);
                 return NextResponse.json({
                     message: 'Webhook already processed (duplicate prevention)',
                     bookingReference,
@@ -71,16 +95,19 @@ export async function POST(request: NextRequest) {
                 }, { status: 200 });
             }
 
-            // Mark all identifiers as processed (expire after 24 hours)
-            const markPromises = webhookIdentifiers.map(id =>
-                kv.set(id, {
-                    processed: true,
-                    timestamp: new Date().toISOString(),
-                    paystackReference,
-                    bookingReference
-                }, { ex: 86400 }) // 24 hours expiry
+            // Mark all identifiers as processed immediately (expire after 24 hours)
+            await Promise.all(
+                webhookKeys.map(key =>
+                    redis.setEx(key, 86400, JSON.stringify({
+                        processed: true,
+                        timestamp: new Date().toISOString(),
+                        paystackReference,
+                        bookingReference
+                    }))
+                )
             );
-            await Promise.all(markPromises);
+
+            console.log('Marked webhook as processed, proceeding with validation');
 
             if (!metadata) {
                 console.error('No metadata found in webhook data');
@@ -180,8 +207,8 @@ export async function POST(request: NextRequest) {
                     age: Number(p.age),
                     gender: p.gender,
                 })),
-                paymentReference: paystackReference,
-                reference: bookingReference,
+                paymentReference: paystackReference, // This is the Paystack transaction reference
+                reference: bookingReference, // This is our booking reference (what user sees and uses to navigate)
             };
 
             const apiUrl = `${baseUrl}/api/bookings`;
@@ -222,7 +249,7 @@ export async function POST(request: NextRequest) {
 
             return NextResponse.json({
                 message: 'Webhook processed successfully',
-                bookingReference: bookingResponse.reference
+                bookingReference: bookingResponse.reference // Return the actual reference from the booking API
             }, { status: 200 });
         }
 
