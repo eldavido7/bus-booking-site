@@ -78,7 +78,7 @@ export default function AdminLogin() {
           <div className="flex items-center justify-center space-x-2 mb-4">
             <Image
               src="/logo.png"
-              alt="TravelEase Logo"
+              alt="KADZAI TRANSPORT AND LOGISTICS Logo"
               width={128}
               height={128}
             />

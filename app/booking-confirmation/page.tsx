@@ -195,7 +195,7 @@ function BookingConfirmationContent() {
                   <div className="flex items-center space-x-2">
                     <Image
                       src="/logowhite.png"
-                      alt="TravelEase Logo"
+                      alt="KADZAI TRANSPORT AND LOGISTICS Logo"
                       width={120}
                       height={120}
                       className="logo-text"
@@ -379,9 +379,9 @@ function BookingConfirmationContent() {
                       Need Help?
                     </h4>
                     <ul className="text-sm text-gray-600 space-y-1">
-                      <li>• Email: support@travelease.com</li>
-                      <li>• Phone: +234 800 123 4567</li>
-                      <li>• WhatsApp: +234 800 123 4567</li>
+                      <li>• Email: kadzai_t&l@gmail.com</li>
+                      <li>• Phone: +234 903 369 6516</li>
+                      <li>• WhatsApp: +234 903 369 6516</li>
                       <li>• Available 24/7 for assistance</li>
                     </ul>
                   </div>
@@ -410,7 +410,7 @@ function BookingConfirmationContent() {
 
         <div className="text-center mt-8 p-6 bg-white rounded-lg border">
           <h3 className="font-semibold text-gray-900 mb-2">
-            Thank you for choosing TravelEase!
+            Thank you for choosing KADZAI TRANSPORT AND LOGISTICS!
           </h3>
           <p className="text-gray-600">
             We hope you have a comfortable and safe journey. Don&apos;t forget

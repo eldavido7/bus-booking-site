@@ -187,7 +187,7 @@ function SeatSelectionContent() {
               <div className="flex items-center space-x-2">
                 <Image
                   src="/logo.png"
-                  alt="TravelEase Logo"
+                  alt="KADZAI TRANSPORT AND LOGISTICS Logo"
                   width={128}
                   height={128}
                 />

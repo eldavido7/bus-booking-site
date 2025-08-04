@@ -10,7 +10,7 @@ export default function Footer() {
             <div className="flex items-center space-x-2 mb-6">
               <Image
                 src="/logowhite.png"
-                alt="TravelEase Logo"
+                alt="KADZAI TRANSPORT AND LOGISTICS Logo"
                 width={128}
                 height={128}
               />

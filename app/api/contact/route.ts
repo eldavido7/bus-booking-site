@@ -24,7 +24,7 @@ export async function POST(request: Request) {
             to: process.env.EMAIL || process.env.NEXT_PUBLIC_EMAIL, // Send to your own email
             subject: `New Contact Form Message from ${name}`,
             html: `
-        <h1>New Message from TravelEase Contact Form</h1>
+        <h1>New Message from KADZAI TRANSPORT AND LOGISTICS Contact Form</h1>
         <p><strong>Name:</strong> ${name}</p>
         <p><strong>Email:</strong> ${email}</p>
         <hr />

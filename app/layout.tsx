@@ -10,7 +10,7 @@ import AuthInitializer from "../lib/AuthInitializer";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "TravelEase - Premium Bus Booking Platform",
+  title: "KADZAI TRANSPORT AND LOGISTICS - Premium Bus Booking Platform",
   description: "Book comfortable and affordable bus tickets online with ease",
 };
 
