@@ -28,7 +28,8 @@ function BookingConfirmationContent() {
   const searchParams = useSearchParams();
   const { state, dispatch } = useBooking();
   const ticketRef = useRef<HTMLDivElement>(null);
-  // Get booking reference from URL params - this should be the same one sent to Paystack
+
+  // Get booking reference from URL params
   const bookingReference = searchParams.get("reference");
 
   useEffect(() => {
@@ -128,11 +129,13 @@ function BookingConfirmationContent() {
 
       pdf.save(`ticket-${bookingReference}.pdf`);
 
+      // Restore original styles
       ticketRef.current.style.width = originalWidth;
       ticketRef.current.style.maxWidth = originalMaxWidth;
       ticketRef.current.style.transform = originalTransform;
       ticketRef.current.style.transformOrigin = originalTransformOrigin;
 
+      // Remove classes
       logoTexts.forEach((el) => el.classList.remove("pdf-logo-text"));
       headerTexts.forEach((el) => el.classList.remove("pdf-header-text"));
       sectionTexts.forEach((el) => el.classList.remove("pdf-section-text"));
@@ -143,6 +146,7 @@ function BookingConfirmationContent() {
       console.error("Failed to generate PDF:", error);
       alert("Failed to download ticket. Please try again.");
 
+      // Cleanup on error
       if (ticketRef.current) {
         ticketRef.current.style.width = "";
         ticketRef.current.style.maxWidth = "";
@@ -181,6 +185,7 @@ function BookingConfirmationContent() {
             confirmation details to your email.
           </p>
         </div>
+
         <div ref={ticketRef}>
           <Card className="mb-8">
             <CardHeader className="bg-primary text-white">
@@ -258,6 +263,7 @@ function BookingConfirmationContent() {
                     </div>
                   </div>
                 </div>
+
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
                     <Users className="w-5 h-5 text-green-600" />
@@ -297,6 +303,7 @@ function BookingConfirmationContent() {
                   </div>
                 </div>
               </div>
+
               <div className="mt-8 pt-8 border-t">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Contact Information
@@ -318,6 +325,7 @@ function BookingConfirmationContent() {
                   </div>
                 </div>
               </div>
+
               <div className="mt-8 pt-8 border-t">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Payment Summary
@@ -346,6 +354,7 @@ function BookingConfirmationContent() {
                   </div>
                 </div>
               </div>
+
               <div className="mt-8 pt-8 border-t">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Important Information
@@ -380,6 +389,7 @@ function BookingConfirmationContent() {
             </CardContent>
           </Card>
         </div>
+
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button
             variant="outline"
@@ -396,6 +406,7 @@ function BookingConfirmationContent() {
             Book Another Trip
           </Button>
         </div>
+
         <div className="text-center mt-8 p-6 bg-white rounded-lg border">
           <h3 className="font-semibold text-gray-900 mb-2">
             Thank you for choosing TravelEase!

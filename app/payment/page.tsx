@@ -58,12 +58,15 @@ function PaymentContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paystackLoaded, setPaystackLoaded] = useState(false);
-  // Generate booking reference once and store it
-  const [bookingReference] = useState(
-    () => `TE${Date.now().toString().slice(-8)}`
+  const [isCreatingBooking, setIsCreatingBooking] = useState(false);
+
+  // Generate a unique payment reference for Paystack
+  const [paymentReference] = useState(
+    () =>
+      `pay_${Date.now().toString()}_${Math.random().toString(36).substr(2, 9)}`
   );
 
-  // Alternative script loading approach
+  // Load Paystack script
   useEffect(() => {
     const loadPaystack = () => {
       if (typeof window !== "undefined" && !window.PaystackPop) {
@@ -71,7 +74,7 @@ function PaymentContent() {
         script.src = "https://js.paystack.co/v1/inline.js";
         script.async = true;
         script.onload = () => {
-          console.log("Paystack script loaded via useEffect");
+          console.log("Paystack script loaded");
           setTimeout(() => {
             setPaystackLoaded(true);
           }, 200);
@@ -81,7 +84,6 @@ function PaymentContent() {
         };
         document.head.appendChild(script);
       } else if (window.PaystackPop) {
-        console.log("Paystack already available");
         setPaystackLoaded(true);
       }
     };
@@ -108,26 +110,18 @@ function PaymentContent() {
     router,
   ]);
 
+  // Check for payment success from URL params
   useEffect(() => {
-    const paymentReference = searchParams.get("reference");
-    if (paymentReference) {
-      verifyPayment(paymentReference);
+    const reference = searchParams.get("reference");
+    const status = searchParams.get("status");
+
+    if (reference && status === "success") {
+      handlePaymentSuccess(reference);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const initializePayment = async () => {
-    console.log("Initializing payment...");
-    console.log("Paystack loaded:", paystackLoaded);
-    console.log(
-      "PaystackPop available:",
-      !!(typeof window !== "undefined" && window.PaystackPop)
-    );
-    console.log(
-      "Public key available:",
-      !!process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY
-    );
-
     if (!paystackLoaded) {
       toast.error(
         "Payment system is still loading. Please wait a moment and try again."
@@ -135,10 +129,8 @@ function PaymentContent() {
       return;
     }
 
-    // Check if public key is available
     if (!process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY) {
       toast.error("Payment configuration error. Please contact support.");
-      console.error("NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY is not defined");
       return;
     }
 
@@ -151,53 +143,13 @@ function PaymentContent() {
     }
 
     try {
-      const payload = {
-        email: state.contact?.email,
-        amount: state.totalAmount * 100,
-        reference: bookingReference, // Use the same reference for Paystack
-        metadata: {
-          customer: {
-            email: state.contact?.email,
-            phone: state.contact?.phone,
-          },
-          passengers: state.passengers.map((p) => ({
-            name: p.name,
-            seat: p.seat,
-            age: Number(p.age),
-            gender: p.gender,
-          })),
-          tripId: state.selectedTrip?.id,
-          totalAmount: Number(state.totalAmount),
-          bookingReference, // Keep in metadata for webhook
-        },
-      };
-      console.log(
-        "Sending to /api/paystack/initialize:",
-        JSON.stringify(payload, null, 2)
-      );
-
-      const response = await fetch("/api/paystack/initialize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-      if (!response.ok || !data.status) {
-        throw new Error(data.error || "Failed to initialize payment");
-      }
-
-      console.log("Payment initialization successful, opening Paystack popup");
-      console.log(
-        "Using key:",
-        process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY?.substring(0, 10) + "..."
-      );
+      console.log("Opening Paystack popup for payment");
 
       window.PaystackPop.setup({
         key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY!,
         email: state.contact?.email,
-        amount: state.totalAmount * 100,
-        ref: bookingReference, // Use our booking reference, not Paystack's
+        amount: state.totalAmount * 100, // Convert to kobo
+        ref: paymentReference,
         onClose: () => {
           console.log("Paystack popup closed");
           setIsProcessing(false);
@@ -205,8 +157,12 @@ function PaymentContent() {
         },
         callback: (response: PaystackResponse) => {
           console.log("Paystack callback received:", response);
-          // Use our booking reference instead of Paystack's reference
-          verifyPayment(bookingReference);
+          if (response.status === "success") {
+            handlePaymentSuccess(response.reference);
+          } else {
+            toast.error("Payment failed. Please try again.");
+            setIsProcessing(false);
+          }
         },
       }).openIframe();
     } catch (error) {
@@ -217,39 +173,69 @@ function PaymentContent() {
     }
   };
 
-  const verifyPayment = async (paymentReference: string) => {
-    setIsProcessing(true);
+  const handlePaymentSuccess = async (paystackReference: string) => {
+    setIsCreatingBooking(true);
+    setPaymentSuccess(true);
+
     try {
-      const response = await fetch("/api/paystack/verify", {
+      // First verify the payment with Paystack
+      const verifyResponse = await fetch("/api/paystack/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reference: paymentReference }),
+        body: JSON.stringify({ reference: paystackReference }),
       });
 
-      const data = await response.json();
-      if (!response.ok || !data.status) {
-        throw new Error(data.error || "Payment verification failed");
+      const verifyData = await verifyResponse.json();
+      if (!verifyResponse.ok || !verifyData.status) {
+        throw new Error("Payment verification failed");
       }
 
-      setPaymentSuccess(true);
-      toast.success("Payment successful! Your booking has been confirmed.");
+      // Create the booking
+      const bookingData = {
+        tripId: state.selectedTrip?.id,
+        email: state.contact?.email,
+        phone: state.contact?.phone,
+        passengers: state.passengers.map((p) => ({
+          name: p.name,
+          seat: p.seat,
+          age: Number(p.age),
+          gender: p.gender,
+        })),
+        paymentReference: paystackReference,
+      };
 
-      // Use the booking reference from the API response, or fall back to payment reference
-      const actualBookingReference = data.bookingReference || paymentReference;
-      console.log(
-        "Redirecting with booking reference:",
-        actualBookingReference
-      );
+      const bookingResponse = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bookingData),
+      });
+
+      const bookingResult = await bookingResponse.json();
+
+      if (!bookingResponse.ok) {
+        throw new Error(
+          bookingResult.error?.message || "Failed to create booking"
+        );
+      }
+
+      toast.success("Payment successful! Your booking has been confirmed.");
 
       setTimeout(() => {
         router.push(
-          `/booking-confirmation?reference=${actualBookingReference}`
+          `/booking-confirmation?reference=${bookingResult.reference}`
         );
       }, 2000);
     } catch (error) {
-      toast.error("Payment verification failed", {
-        description: error instanceof Error ? error.message : "Unknown error",
+      console.error("Error creating booking:", error);
+      toast.error("Payment successful but booking creation failed", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "Please contact support with payment reference: " +
+              paystackReference,
       });
+      setIsCreatingBooking(false);
+      setPaymentSuccess(false);
       setIsProcessing(false);
     }
   };
@@ -274,8 +260,9 @@ function PaymentContent() {
               Payment Successful!
             </h2>
             <p className="text-gray-600 mb-4">
-              Your booking has been confirmed. Redirecting to confirmation
-              page...
+              {isCreatingBooking
+                ? "Creating your booking... Please wait."
+                : "Your booking has been confirmed. Redirecting to confirmation page..."}
             </p>
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           </CardContent>
@@ -310,6 +297,7 @@ function PaymentContent() {
           </div>
         </div>
       </header>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
@@ -374,6 +362,7 @@ function PaymentContent() {
                       )}
                     </Button>
                   </div>
+
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div className="flex items-start space-x-3">
                       <Shield className="w-5 h-5 text-green-600 mt-0.5" />
@@ -388,6 +377,7 @@ function PaymentContent() {
                       </div>
                     </div>
                   </div>
+
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                     <div className="flex items-start space-x-3">
                       <Clock className="w-5 h-5 text-orange-600 mt-0.5" />
@@ -406,6 +396,7 @@ function PaymentContent() {
               </CardContent>
             </Card>
           </div>
+
           <div className="lg:col-span-1">
             <Card className="sticky top-8">
               <CardHeader>
@@ -414,12 +405,13 @@ function PaymentContent() {
               <CardContent className="space-y-6">
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">
-                    Booking Reference
+                    Payment Reference
                   </h4>
                   <div className="text-sm font-mono bg-gray-100 p-2 rounded">
-                    {bookingReference}
+                    {paymentReference}
                   </div>
                 </div>
+
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">
                     Trip Details
@@ -447,6 +439,7 @@ function PaymentContent() {
                     </div>
                   </div>
                 </div>
+
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Passengers</h4>
                   <div className="space-y-2">
@@ -461,6 +454,7 @@ function PaymentContent() {
                     ))}
                   </div>
                 </div>
+
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">
                     Contact Information
@@ -470,6 +464,7 @@ function PaymentContent() {
                     <div>{state.contact?.phone}</div>
                   </div>
                 </div>
+
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Pricing</h4>
                   <div className="space-y-2 text-sm">
@@ -483,6 +478,7 @@ function PaymentContent() {
                     ))}
                   </div>
                 </div>
+
                 <div className="border-t pt-4">
                   <div className="flex justify-between items-center text-xl font-bold">
                     <span>Total:</span>

@@ -1,3 +1,4 @@
+// /api/bookings/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../../../lib/prisma';
 import { Prisma } from '@prisma/client';
@@ -6,8 +7,6 @@ import { BookingInput, BookingResponse, SeatLayoutJson } from '../../../lib/type
 import { v4 as uuidv4 } from 'uuid';
 
 const isValidEmail = (email: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-// Validate phone format (simplified, adjust for your region)
 const isValidPhone = (phone: string): boolean => /^\+?\d{10,14}$/.test(phone);
 
 export async function GET(request: NextRequest) {
@@ -112,8 +111,13 @@ export async function POST(request: NextRequest) {
         const body: BookingInput = await request.json();
         const { tripId, email, phone, passengers, paymentReference } = body;
 
+        console.log('Creating booking with data:', { tripId, email, phone, passengers: passengers.length, paymentReference });
+
+        // Validate required fields
         if (!tripId || !email || !phone || !passengers || !Array.isArray(passengers) || passengers.length === 0) {
-            return NextResponse.json({ error: { code: 400, message: 'All fields are required, and passengers must be a non-empty array' } }, { status: 400 });
+            return NextResponse.json({
+                error: { code: 400, message: 'All fields are required, and passengers must be a non-empty array' }
+            }, { status: 400 });
         }
 
         if (!isValidEmail(email)) {
@@ -124,30 +128,43 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: { code: 400, message: 'Invalid phone format' } }, { status: 400 });
         }
 
-        // Validate paymentReference if provided
+        // Check if paymentReference already exists (prevent duplicate bookings)
         if (paymentReference) {
-            const existingBooking = await prisma.booking.findFirst({ where: { paymentReference } });
+            const existingBooking = await prisma.booking.findFirst({
+                where: { paymentReference },
+                select: { reference: true, paymentReference: true }
+            });
+
             if (existingBooking) {
-                return NextResponse.json({ error: { code: 400, message: 'Payment reference already used' } }, { status: 400 });
+                console.log('Booking already exists for payment reference:', paymentReference);
+                return NextResponse.json({
+                    error: { code: 400, message: 'Payment reference already used' }
+                }, { status: 400 });
             }
         }
 
-        // Validate trip
+        // Validate trip exists and is available
         const trip = await prisma.trip.findUnique({
             where: { id: tripId },
             include: { bus: { include: { seats: true } } },
         });
+
         if (!trip || !trip.isAvailable) {
-            return NextResponse.json({ error: { code: 400, message: 'Invalid or unavailable trip' } }, { status: 400 });
+            return NextResponse.json({
+                error: { code: 400, message: 'Invalid or unavailable trip' }
+            }, { status: 400 });
         }
 
         // Validate passengers and seats
         const seatNumbers = passengers.map((p) => p.seat);
         if (new Set(seatNumbers).size !== seatNumbers.length) {
-            return NextResponse.json({ error: { code: 400, message: 'Duplicate seat numbers in booking' } }, { status: 400 });
+            return NextResponse.json({
+                error: { code: 400, message: 'Duplicate seat numbers in booking' }
+            }, { status: 400 });
         }
 
         const availableSeats = trip.bus.seats.filter((seat) => seat.isAvailable).map((seat) => seat.number);
+
         for (const passenger of passengers) {
             if (!passenger.name || !passenger.seat || typeof passenger.age !== 'number' || passenger.age <= 0 || !passenger.gender) {
                 return NextResponse.json({
@@ -162,18 +179,17 @@ export async function POST(request: NextRequest) {
             }
         }
 
-
         // Calculate total amount
         const totalAmount = passengers.length * trip.price;
 
-        // Generate unique reference
-        const reference = `TE${uuidv4().slice(0, 8).toUpperCase()}`;
+        // Generate unique booking reference (not the payment reference)
+        const bookingReference = `TE${uuidv4().slice(0, 8).toUpperCase()}`;
 
-        // Create booking and update seat availability
+        // Create booking and update seat availability in a transaction
         const booking = await prisma.$transaction(async (tx) => {
             const createdBooking = await tx.booking.create({
                 data: {
-                    reference,
+                    reference: bookingReference,
                     status: 'confirmed',
                     tripId,
                     busId: trip.busId,
@@ -195,7 +211,7 @@ export async function POST(request: NextRequest) {
                     totalAmount,
                     bookingDate: new Date().toISOString().split('T')[0],
                     createdBy: email,
-                    paymentReference,
+                    paymentReference, // Store the Paystack payment reference
                 },
                 include: {
                     trip: { include: { bus: { include: { seats: true } } } },
@@ -212,7 +228,10 @@ export async function POST(request: NextRequest) {
             return createdBooking;
         });
 
-        return NextResponse.json({
+        console.log('Booking created successfully:', booking.reference);
+
+        // Return the booking data
+        const response: BookingResponse = {
             reference: booking.reference,
             status: booking.status,
             tripId: booking.tripId,
@@ -226,13 +245,15 @@ export async function POST(request: NextRequest) {
                 id: p.id,
                 name: p.name,
                 seat: p.seat,
+                age: p.age,
+                gender: p.gender,
             })),
             email: booking.email,
             phone: booking.phone,
             totalAmount: booking.totalAmount,
             bookingDate: booking.bookingDate,
             createdAt: booking.createdAt.toISOString(),
-            paymentReference: booking.paymentReference,
+            paymentReference: booking.paymentReference ?? undefined,
             trip: {
                 id: booking.trip.id,
                 busId: booking.trip.busId,
@@ -259,7 +280,9 @@ export async function POST(request: NextRequest) {
                     rating: booking.trip.bus.rating,
                 },
             },
-        });
+        };
+
+        return NextResponse.json(response);
     } catch (error) {
         console.error('Create booking error:', error);
         const errorMessage = error instanceof Error ? `Internal server error: ${error.message}` : 'Internal server error';

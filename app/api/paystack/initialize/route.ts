@@ -1,22 +1,25 @@
+// /api/paystack/initialize/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
     try {
-        const { email, amount, reference, metadata } = await request.json();
-        console.log('Received in /api/paystack/initialize:', { email, amount, reference, metadata });
+        const { email, amount, reference } = await request.json();
+        console.log('Paystack initialize request:', { email, amount, reference });
 
-        if (!email || !amount || !metadata) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        if (!email || !amount || !reference) {
+            return NextResponse.json({ error: 'Missing required fields: email, amount, reference' }, { status: 400 });
         }
 
-        const requiredMetadataFields = ['customer', 'passengers', 'tripId', 'totalAmount', 'bookingReference'];
-        const missingFields = requiredMetadataFields.filter((field) => !metadata[field]);
-        if (missingFields.length > 0) {
-            return NextResponse.json({ error: `Missing metadata fields: ${missingFields.join(', ')}` }, { status: 400 });
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
         }
 
-        // Use the provided reference or fall back to metadata.bookingReference
-        const transactionReference = reference || metadata.bookingReference;
+        // Validate amount
+        if (typeof amount !== 'number' || amount <= 0) {
+            return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
+        }
 
         const response = await fetch('https://api.paystack.co/transaction/initialize', {
             method: 'POST',
@@ -26,9 +29,8 @@ export async function POST(request: NextRequest) {
             },
             body: JSON.stringify({
                 email,
-                amount,
-                reference: transactionReference, // Use our booking reference
-                metadata,
+                amount, // Amount should already be in kobo from frontend
+                reference,
             }),
         });
 
@@ -36,12 +38,22 @@ export async function POST(request: NextRequest) {
         console.log('Paystack initialize response:', data);
 
         if (!response.ok || !data.status) {
-            return NextResponse.json({ error: data.message || 'Failed to initialize payment' }, { status: 400 });
+            console.error('Paystack initialization failed:', data);
+            return NextResponse.json({
+                error: data.message || 'Failed to initialize payment'
+            }, { status: 400 });
         }
 
-        return NextResponse.json(data);
+        return NextResponse.json({
+            status: true,
+            data: data.data,
+            authorization_url: data.data.authorization_url,
+            access_code: data.data.access_code,
+            reference: data.data.reference
+        });
     } catch (error) {
         console.error('Initialize payment error:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
