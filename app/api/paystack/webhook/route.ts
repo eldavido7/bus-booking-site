@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import Redis from 'redis';
+import { createClient } from 'redis';
 import { BookingInput } from '../../../../lib/types';
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || 'sk_test_default_key';
 
 // Create Redis client
-const redis = Redis.createClient({
+const redis = createClient({
     url: process.env.REDIS_URL,
 });
 
