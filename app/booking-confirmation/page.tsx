@@ -379,7 +379,7 @@ function BookingConfirmationContent() {
                       Need Help?
                     </h4>
                     <ul className="text-sm text-gray-600 space-y-1">
-                      <li>• Email: kadzai_t&l@gmail.com</li>
+                      <li>• Email: kdztransportation@gmail.com</li>
                       <li>• Phone: +234 903 369 6516</li>
                       <li>• WhatsApp: +234 903 369 6516</li>
                       <li>• Available 24/7 for assistance</li>

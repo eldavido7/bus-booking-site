@@ -11,7 +11,6 @@ import {
   Target,
   Lightbulb,
 } from "lucide-react";
-import Image from "next/image";
 
 export default function About() {
   const stats = [
@@ -103,9 +102,9 @@ export default function About() {
       {/* Story Section */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-1 gap-12 items-center">
             <div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-6">
+              <h2 className="text-4xl text-center font-bold text-gray-900 mb-6">
                 Our Story
               </h2>
               <div className="space-y-4 text-gray-600">
@@ -135,7 +134,7 @@ export default function About() {
                 </p>
               </div>
             </div>
-            <div className="relative">
+            {/* <div className="relative">
               <Image
                 src="https://images.pexels.com/photos/1010973/pexels-photo-1010973.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop"
                 alt="Modern bus fleet"
@@ -143,7 +142,7 @@ export default function About() {
                 height={400}
                 className="rounded-lg shadow-xl w-full h-auto"
               />
-            </div>
+            </div> */}
           </div>
         </div>
       </section>
@@ -201,7 +200,7 @@ export default function About() {
       </section>
 
       {/* Team Section */}
-      <section className="py-20 bg-gray-50">
+      {/* <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
@@ -262,7 +261,7 @@ export default function About() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
     </div>
   );
 }

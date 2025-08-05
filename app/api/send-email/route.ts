@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 `).join('')}
     </ul>
     <p>Total Paid: ₦${booking.totalAmount.toLocaleString()}</p>
-    <p>Need help? Contact our support team at kadzai_t&l@gmail.com</p>
+    <p>Need help? Contact our support team at kdztransportation@gmail.com</p>
   `;
 
     try {

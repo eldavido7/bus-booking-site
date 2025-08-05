@@ -37,14 +37,14 @@ export default function Footer() {
                   Track Booking
                 </Link>
               </li>
-              {/* <li>
+              <li>
                 <Link
                   href="/contact"
                   className="hover:text-white transition-colors"
                 >
                   Help Center
                 </Link>
-              </li> */}
+              </li>
               <li>
                 <Link
                   href="/about"
@@ -88,7 +88,7 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">Contact Info</h3>
             <ul className="space-y-3 text-gray-400">
-              <li>Email: kadzai_t&l@gmail.com</li>
+              <li>Email: kdztransportation@gmail.com</li>
               <li>Phone: +234 903 369 6516</li>
               <li>Available 24/7</li>
             </ul>

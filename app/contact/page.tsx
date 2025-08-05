@@ -18,6 +18,8 @@ export default function Contact() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
+
     message: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,7 +34,7 @@ export default function Contact() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.email || !formData.message) {
+    if (!formData.name || !formData.phone || !formData.message) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -62,7 +64,7 @@ export default function Contact() {
       toast.success(
         "Message sent successfully! We'll get back to you within 24 hours."
       );
-      setFormData({ name: "", email: "", message: "" }); // Clear the form
+      setFormData({ name: "", email: "", message: "", phone: "" }); // Clear the form
     } catch (error: unknown) {
       toast.error("Failed to send message. Please try again.", {
         description: (error as Error).message,
@@ -112,9 +114,7 @@ export default function Contact() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">
-                      Email Address <span className="text-red-500">*</span>
-                    </Label>
+                    <Label htmlFor="email">Email Address (optional)</Label>
                     <Input
                       id="email"
                       name="email"
@@ -123,6 +123,20 @@ export default function Contact() {
                       onChange={handleInputChange}
                       placeholder="Enter your email address"
                       required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">
+                      Phone Number<span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      placeholder="Enter your phone number"
                     />
                   </div>
 
@@ -200,7 +214,7 @@ export default function Contact() {
                       Send us an email anytime
                     </p>
                     <p className="font-medium text-green-600">
-                      kadzai_t&l@gmail.com
+                      kdztransportation@gmail.com
                     </p>
                     <p className="text-sm text-gray-500">
                       Response within 2 hours
@@ -261,7 +275,7 @@ export default function Contact() {
                     </h4>
                     <p className="text-sm text-gray-600">
                       You can cancel your booking up to 2 hours before departure
-                      through our website or by calling our customer service.
+                      through by calling our customer service.
                     </p>
                   </div>
                   <div>
@@ -281,7 +295,7 @@ export default function Contact() {
                     <p className="text-sm text-gray-600">
                       Yes, you can change your travel date up to 24 hours before
                       departure. Additional charges may apply depending on the
-                      new date.
+                      new date. Contact our customer support to do this for you.
                     </p>
                   </div>
                 </div>
