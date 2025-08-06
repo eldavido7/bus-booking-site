@@ -68,14 +68,14 @@ export default function About() {
       <section className="py-20 bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            About KADZAI TRANSPORT AND LOGISTICS
+            About TravelEase
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            KADZAI TRANSPORT AND LOGISTICS is a forward-thinking brand
-            positioned to redefine the Nigerian transport and logistics
-            industry. With a mission rooted in efficiency, reliability, and
-            sustainability, KADZAI delivers goods and services seamlessly from
-            one destination to another—always with excellence at its core
+            TravelEase is a forward-thinking brand positioned to redefine the
+            Nigerian transport and logistics industry. With a mission rooted in
+            efficiency, reliability, and sustainability, KADZAI delivers goods
+            and services seamlessly from one destination to another—always with
+            excellence at its core
           </p>
         </div>
       </section>

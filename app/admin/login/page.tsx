@@ -13,8 +13,7 @@ import {
 } from "../../../components/ui/card";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { toast } from "sonner";
-import Image from "next/image";
-import { useAuthStore } from "../../../lib/store/authStore"; // make sure path is correct
+import { useAuthStore } from "../../../lib/store/authStore";
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -75,13 +74,11 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <Image
-              src="/logo.png"
-              alt="KADZAI TRANSPORT AND LOGISTICS Logo"
-              width={128}
-              height={128}
-            />
+          <div className="flex items-center space-x-2 mb-6">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-lg">T</span>
+            </div>
+            <span className="text-2xl font-bold">TravelEase</span>
           </div>
           <CardTitle className="text-2xl">Admin Login</CardTitle>
           <p className="text-gray-600">Access the admin dashboard</p>

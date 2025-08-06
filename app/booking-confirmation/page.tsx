@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
-import Image from "next/image";
 
 function BookingConfirmationContent() {
   const router = useRouter();
@@ -192,14 +191,11 @@ function BookingConfirmationContent() {
             <CardHeader className="bg-primary text-white">
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="flex items-center space-x-2">
-                    <Image
-                      src="/logowhite.png"
-                      alt="KADZAI TRANSPORT AND LOGISTICS Logo"
-                      width={120}
-                      height={120}
-                      className="logo-text"
-                    />
+                  <div className="flex items-center space-x-2 mb-6">
+                    <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">T</span>
+                    </div>
+                    <span className="text-2xl font-bold">TravelEase</span>
                   </div>
                   <CardTitle className="mt-4 text-lg font-bold header-text">
                     Booking Confirmation
@@ -410,7 +406,7 @@ function BookingConfirmationContent() {
 
         <div className="text-center mt-8 p-6 bg-white rounded-lg border">
           <h3 className="font-semibold text-gray-900 mb-2">
-            Thank you for choosing KADZAI TRANSPORT AND LOGISTICS!
+            Thank you for choosing TravelEase!
           </h3>
           <p className="text-gray-600">
             We hope you have a comfortable and safe journey. Don&apos;t forget

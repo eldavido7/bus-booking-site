@@ -21,7 +21,6 @@ import {
 import { useBooking, Passenger } from "../../context/BookingContext";
 import { ArrowLeft, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
-import Image from "next/image";
 
 function PassengerInfoContent() {
   const router = useRouter();
@@ -149,13 +148,11 @@ function PassengerInfoContent() {
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back to Seat Selection</span>
               </Button>
-              <div className="flex items-center space-x-2">
-                <Image
-                  src="/logo.png"
-                  alt="KADZAI TRANSPORT AND LOGISTICS Logo"
-                  width={128}
-                  height={128}
-                />
+              <div className="flex items-center space-x-2 mb-6">
+                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">T</span>
+                </div>
+                <span className="text-2xl font-bold">TravelEase</span>
               </div>
             </div>
           </div>

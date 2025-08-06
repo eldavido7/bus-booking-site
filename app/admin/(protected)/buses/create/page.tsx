@@ -187,14 +187,6 @@ export default function CreateBus() {
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back to Buses</span>
               </Button>
-              {/* <div className="flex items-center space-x-2">
-                <Image
-                  src="/logo.png"
-                  alt="KADZAI TRANSPORT AND LOGISTICS Logo"
-                  width={128}
-                  height={128}
-                />
-              </div> */}
             </div>
           </div>
         </div>

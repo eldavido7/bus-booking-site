@@ -21,7 +21,6 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import Image from "next/image";
 import { useAuthStore } from "../../../lib/store/authStore";
 import {
   useBookingStore,
@@ -110,12 +109,12 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <Image
-                  src="/logo.png"
-                  alt="KADZAI TRANSPORT AND LOGISTICS Logo"
-                  width={128}
-                  height={128}
-                />
+                <div className="flex items-center space-x-2 mb-6">
+                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">T</span>
+                  </div>
+                  <span className="text-2xl font-bold">TravelEase</span>
+                </div>
                 <div>
                   <div className="text-sm text-gray-600">Admin Dashboard</div>
                 </div>

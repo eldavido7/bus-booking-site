@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
     // Format HTML email with booking details
     const htmlContent = `
-    <h1>Your KADZAI TRANSPORT AND LOGISTICS Booking Confirmation: ${booking.reference}</h1>
+    <h1>Your TravelEase Booking Confirmation: ${booking.reference}</h1>
     <h2>Trip Details</h2>
     <p><strong>Route:</strong> ${booking.from} → ${booking.to}</p>
     <p><strong>Date:</strong> ${new Date(booking.date).toLocaleDateString()}</p>
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
     try {
         await transporter.sendMail({
-            from: `"KADZAI TRANSPORT AND LOGISTICS" <${process.env.NEXT_PUBLIC_EMAIL}>`,
+            from: `"TravelEase" <${process.env.NEXT_PUBLIC_EMAIL}>`,
             to,
             subject: `Your Travel Ticket Confirmation: ${booking.reference}`,
             html: htmlContent
