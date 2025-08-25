@@ -93,7 +93,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
-          <p>&copy; {new Date().getFullYear()} Kadzai. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} TravelEase. All rights reserved.</p>
         </div>
       </div>
     </footer>

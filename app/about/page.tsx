@@ -73,7 +73,7 @@ export default function About() {
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             TravelEase is a forward-thinking brand positioned to redefine the
             Nigerian transport and logistics industry. With a mission rooted in
-            efficiency, reliability, and sustainability, KADZAI delivers goods
+            efficiency, reliability, and sustainability, TravelEase delivers goods
             and services seamlessly from one destination to another—always with
             excellence at its core
           </p>
@@ -109,28 +109,11 @@ export default function About() {
               </h2>
               <div className="space-y-4 text-gray-600">
                 <p>
-                  Guided by a strong vision to revolutionize the sector through
-                  innovation and exceptional service delivery, the brand is
-                  built on values of safety, customer satisfaction, and
-                  eco-conscious practices. More than just a logistics company,
-                  KADZAI T&L is a premium service provider, aiming to create a
-                  strong emotional connection with every traveler—making each
-                  journey not just simple, but memorable.
-                </p>
-                <p>
-                  Our audience includes adult travelers of all kinds, across
-                  both genders, who value comfort, professionalism, and
-                  hospitality. The brand’s tone is formal yet welcoming, and its
-                  personality exudes a professional yet homely presence—designed
-                  to stand out through excellence and care in a traditionally
-                  rigid industry. Visually, KADZAI T&L embraces a vibrant and
-                  iconic identity, brought to life through an icon-based logo,
-                  bold colors, and design elements that communicate energy,
-                  trust, and movement. Every detail is thoughtfully crafted to
-                  support our short-term goals of increasing brand visibility
-                  and expanding route coverage, and our long-term ambition of
-                  becoming a leading luxury transport brand in Nigeria and
-                  beyond.
+                  At TravelEase, we believe that travel should be a seamless and
+                  enjoyable experience for everyone. Our mission is to revolutionize the
+                  way people travel and connect with the world. We are a team of passionate
+                  individuals who are dedicated to providing exceptional service and
+                  creating a positive impact on the travel industry.
                 </p>
               </div>
             </div>

@@ -19,16 +19,28 @@ export async function GET(request: NextRequest) {
         const limit = parseInt(searchParams.get('limit') || '10');
         const offset = parseInt(searchParams.get('offset') || '0');
 
-        const where: Prisma.TripWhereInput = {};
-        if (from) where.from = { contains: from, mode: 'insensitive' };
-        if (to) where.to = { contains: to, mode: 'insensitive' };
-        if (date) {
+        const where: Prisma.TripWhereInput = {
+            // Always show only upcoming trips
+            date: { gte: new Date() }
+        };
+
+        // Only add filters if they have values
+        if (from && from.trim()) {
+            where.from = { contains: from, mode: 'insensitive' };
+        }
+
+        if (to && to.trim()) {
+            where.to = { contains: to, mode: 'insensitive' };
+        }
+
+        if (date && date.trim()) {
             if (!isValidDate(date)) {
                 return NextResponse.json(
                     { error: { code: 400, message: 'Invalid date format' } },
                     { status: 400 }
                 );
             }
+            // Override the default date filter when specific date is provided
             where.date = { equals: new Date(date) };
         }
 

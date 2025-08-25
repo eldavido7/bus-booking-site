@@ -3,6 +3,7 @@ import prisma from '../../../../lib/prisma';
 import { verifyAdmin, disconnectPrisma } from '../../../../lib/auth';
 import { TripInput, SeatLayoutJson } from '../../../../lib/types';
 import { Prisma } from '@prisma/client';
+import { updateTripAvailability, checkTripReactivation } from '../../../../lib/tripStatusManager';
 
 // Validate time format (HH:MM)
 const isValidTime = (time: string): boolean => /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(time);
@@ -55,6 +56,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             return authResult.error;
         }
 
+        // Update this specific trip's availability before returning it
+        try {
+            await updateTripAvailability(tripId);
+        } catch (error) {
+            console.warn('Failed to update trip availability:', error);
+        }
+
         const trip = await prisma.trip.findUnique({
             where: { id: tripId },
             include: { bus: { include: { seats: true } } },
@@ -96,13 +104,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     } catch (error) {
         console.error('Get trips error:', error);
 
-        // --- FIX: Use a type guard to check the error type ---
         let errorMessage = 'An unknown error occurred';
         if (error instanceof Error) {
-            // Inside this block, TypeScript knows `error` is an Error object
             errorMessage = `Internal server error: ${error.message}`;
         } else {
-            // Handle cases where the thrown value is not an Error object
             errorMessage = `An unexpected error occurred: ${String(error)}`;
         }
 
@@ -206,6 +211,24 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             }
         }
 
+        // Determine final availability status
+        let finalIsAvailable = isAvailable;
+
+        // If isAvailable is not explicitly being set, check automatic conditions
+        if (finalIsAvailable === undefined) {
+            finalIsAvailable = trip.isAvailable; // Keep current status
+        }
+
+        // Override availability if trip should be automatically disabled
+        const checkDate = date || trip.date.toISOString().split('T')[0];
+        const checkDepartureTime = departureTime || trip.departureTime;
+        const tripDateTime = new Date(`${checkDate}T${checkDepartureTime}:00Z`);
+        const now = new Date();
+
+        if (tripDateTime <= now) {
+            finalIsAvailable = false;
+        }
+
         const updatedTrip: TripWithBus = await prisma.trip.update({
             where: { id: tripId },
             data: {
@@ -217,11 +240,28 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
                 arrivalTime: arrivalTime || undefined,
                 duration: duration || undefined,
                 price: price !== undefined ? price : undefined,
-                isAvailable: isAvailable !== undefined ? isAvailable : undefined,
+                isAvailable: finalIsAvailable,
                 modifiedBy: user.email,
             },
             include: { bus: { include: { seats: true } } },
         });
+
+        // After update, check if trip can be reactivated (if seats become available)
+        if (!updatedTrip.isAvailable) {
+            try {
+                await checkTripReactivation(tripId);
+                // Refetch the trip to get updated status
+                const reactivatedTrip = await prisma.trip.findUnique({
+                    where: { id: tripId },
+                    include: { bus: { include: { seats: true } } },
+                });
+                if (reactivatedTrip) {
+                    Object.assign(updatedTrip, reactivatedTrip);
+                }
+            } catch (error) {
+                console.warn('Failed to check trip reactivation:', error);
+            }
+        }
 
         return NextResponse.json({
             id: updatedTrip.id,
@@ -252,13 +292,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     } catch (error) {
         console.error('Update trips error:', error);
 
-        // --- FIX: Use a type guard to check the error type ---
         let errorMessage = 'An unknown error occurred';
         if (error instanceof Error) {
-            // Inside this block, TypeScript knows `error` is an Error object
             errorMessage = `Internal server error: ${error.message}`;
         } else {
-            // Handle cases where the thrown value is not an Error object
             errorMessage = `An unexpected error occurred: ${String(error)}`;
         }
 
@@ -310,13 +347,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     } catch (error) {
         console.error('Delete trips error:', error);
 
-        // --- FIX: Use a type guard to check the error type ---
         let errorMessage = 'An unknown error occurred';
         if (error instanceof Error) {
-            // Inside this block, TypeScript knows `error` is an Error object
             errorMessage = `Internal server error: ${error.message}`;
         } else {
-            // Handle cases where the thrown value is not an Error object
             errorMessage = `An unexpected error occurred: ${String(error)}`;
         }
 

@@ -36,16 +36,27 @@ function SearchResultsContent() {
   const [isLoadingTrips, setIsLoadingTrips] = useState(false);
 
   useEffect(() => {
-    // Create a stable reference for search criteria
-    const searchArgs = {
-      from: state.searchData.from,
-      to: state.searchData.to,
-      date: state.searchData.date,
+    // Build search parameters only with non-empty values
+    const searchArgs: {
+      from?: string;
+      to?: string;
+      date?: string;
+      limit?: number;
+      offset?: number;
+    } = {
+      limit: 10,
+      offset: 0,
     };
 
-    if (!searchArgs.from || !searchArgs.to || !searchArgs.date) {
-      router.push("/");
-      return;
+    // Only include parameters that have values
+    if (state.searchData.from) {
+      searchArgs.from = state.searchData.from;
+    }
+    if (state.searchData.to) {
+      searchArgs.to = state.searchData.to;
+    }
+    if (state.searchData.date) {
+      searchArgs.date = state.searchData.date;
     }
 
     const loadTrips = async () => {
@@ -53,11 +64,7 @@ function SearchResultsContent() {
       setIsLoadingTrips(true);
 
       try {
-        const fetchedTrips = await fetchTrips({
-          ...searchArgs,
-          limit: 10,
-          offset: 0,
-        });
+        const fetchedTrips = await fetchTrips(searchArgs);
         setTrips(fetchedTrips);
       } catch (error) {
         toast.error("Failed to fetch trips", {
@@ -93,6 +100,9 @@ function SearchResultsContent() {
   const availableSeats = (bus: Bus) =>
     bus.seats.filter((seat: Seat) => seat.isAvailable).length;
 
+  // Determine if this is a filtered search or showing all trips
+  const isFilteredSearch = state.searchData.from || state.searchData.to || state.searchData.date;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -122,35 +132,57 @@ function SearchResultsContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search Summary */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            {/* This will be the top row on mobile */}
-            <div className="flex items-center space-x-2">
-              <MapPin className="w-5 h-5 text-primary" />
-              <span className="font-semibold">{state.searchData.from}</span>
-              <span className="text-gray-400">→</span>
-              <span className="font-semibold">{state.searchData.to}</span>
-            </div>
-
-            {/* This will be the bottom row on mobile */}
-            <div className="flex items-center justify-between space-x-4">
+          {isFilteredSearch ? (
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              {/* This will be the top row on mobile */}
               <div className="flex items-center space-x-2">
-                <Clock className="w-5 h-5 text-green-600" />
-                <span>
-                  {new Date(state.searchData.date).toLocaleDateString()}
+                <MapPin className="w-5 h-5 text-primary" />
+                <span className="font-semibold">
+                  {state.searchData.from || "Any departure"}
+                </span>
+                <span className="text-gray-400">→</span>
+                <span className="font-semibold">
+                  {state.searchData.to || "Any destination"}
                 </span>
               </div>
-              <Badge variant="normal">
+
+              {/* This will be the bottom row on mobile */}
+              <div className="flex items-center justify-between space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Clock className="w-5 h-5 text-green-600" />
+                  <span>
+                    {state.searchData.date
+                      ? new Date(state.searchData.date).toLocaleDateString()
+                      : "Any date"
+                    }
+                  </span>
+                </div>
+                <Badge variant="normal">
+                  {state.searchData.passengers} passenger
+                  {state.searchData.passengers > 1 ? "s" : ""}
+                </Badge>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                All Available Trips
+              </h3>
+              <p className="text-gray-600">
+                Browse all upcoming trips and find your perfect journey
+              </p>
+              <Badge variant="normal" className="mt-2">
                 {state.searchData.passengers} passenger
                 {state.searchData.passengers > 1 ? "s" : ""}
               </Badge>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Results */}
         <div className="space-y-6">
           <h2 className="text-2xl font-bold text-gray-900">
-            Available Trips ({trips.length})
+            {isFilteredSearch ? "Matching Trips" : "All Available Trips"} ({trips.length})
           </h2>
 
           {isLoadingTrips ? (
@@ -160,7 +192,10 @@ function SearchResultsContent() {
             </div>
           ) : trips.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
-              No trips found for this route and date.
+              {isFilteredSearch
+                ? "No trips found for your search criteria. Try adjusting your filters."
+                : "No upcoming trips available at the moment."
+              }
             </div>
           ) : (
             trips.map((trip) => {
@@ -225,12 +260,29 @@ function SearchResultsContent() {
                           </div>
                         </div>
 
+                        {/* Date display for all trips view */}
+                        {!isFilteredSearch && (
+                          <div className="mb-4">
+                            <div className="flex items-center space-x-2">
+                              <Clock className="w-4 h-4 text-blue-600" />
+                              <span className="text-sm font-medium text-gray-700">
+                                {new Date(trip.date).toLocaleDateString('en-US', {
+                                  weekday: 'long',
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Amenities */}
                         <div className="flex flex-wrap gap-2">
                           {bus?.amenities.map((amenity) => {
                             const IconComponent =
                               amenityIcons[
-                                amenity as keyof typeof amenityIcons
+                              amenity as keyof typeof amenityIcons
                               ] || MapPin;
                             return (
                               <div
@@ -276,11 +328,11 @@ function SearchResultsContent() {
                           disabled={
                             !trip.bus ||
                             availableSeats(trip.bus) <
-                              state.searchData.passengers
+                            state.searchData.passengers
                           }
                         >
                           {!trip.bus ||
-                          availableSeats(trip.bus) < state.searchData.passengers
+                            availableSeats(trip.bus) < state.searchData.passengers
                             ? "Not Available"
                             : "Select Seats"}
                         </Button>

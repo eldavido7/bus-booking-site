@@ -79,19 +79,18 @@ export default function HomePage() {
   });
 
   const handleSearch = () => {
-    if (!searchForm.from || !searchForm.to || !searchForm.date) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    if (searchForm.from === searchForm.to) {
+    // Allow search even if some fields are empty
+    if (searchForm.from && searchForm.to && searchForm.from === searchForm.to) {
       toast.error("Departure and destination cities must be different");
       return;
     }
 
-    // Convert date to ISO format (YYYY-MM-DDTHH:mm:ss.SSSZ)
-    const isoDate = new Date(searchForm.date).toISOString();
+    // Convert date to ISO format if provided, otherwise use empty string
+    const isoDate = searchForm.date
+      ? new Date(searchForm.date).toISOString()
+      : "";
 
+    // Dispatch the search data (can include empty values)
     dispatch({
       type: "SET_SEARCH_DATA",
       payload: { ...searchForm, date: isoDate },
@@ -132,7 +131,7 @@ export default function HomePage() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Departure city" />
+                      <SelectValue placeholder="Any departure city" />
                     </SelectTrigger>
                     <SelectContent>
                       {cities.map((city) => (
@@ -156,7 +155,7 @@ export default function HomePage() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Destination city" />
+                      <SelectValue placeholder="Any destination city" />
                     </SelectTrigger>
                     <SelectContent>
                       {cities
@@ -185,6 +184,7 @@ export default function HomePage() {
                         date: e.target.value,
                       }))
                     }
+                    placeholder="Any date"
                   />
                 </div>
 
@@ -223,10 +223,17 @@ export default function HomePage() {
                     onClick={handleSearch}
                     className="w-full bg-primary hover:bg-blue-700 text-white py-6"
                   >
-                    Search Buses
+                    {searchForm.from || searchForm.to || searchForm.date
+                      ? "Search Buses"
+                      : "Browse All Trips"}
                   </Button>
                 </div>
               </div>
+
+              {/* Helper text */}
+              <p className="text-sm text-gray-500 text-center mt-4">
+                Leave fields empty to browse all available trips
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -324,11 +331,10 @@ export default function HomePage() {
                     {[...Array(5)].map((_, i) => (
                       <Star
                         key={i}
-                        className={`w-5 h-5 ${
-                          i < testimonial.rating
-                            ? "text-yellow-400 fill-current"
-                            : "text-gray-300"
-                        }`}
+                        className={`w-5 h-5 ${i < testimonial.rating
+                          ? "text-yellow-400 fill-current"
+                          : "text-gray-300"
+                          }`}
                       />
                     ))}
                   </div>

@@ -3,6 +3,7 @@ import prisma from '../../../lib/prisma';
 import { Prisma } from '@prisma/client';
 import { verifyAdmin, disconnectPrisma } from '../../../lib/auth';
 import { TripInput, TripResponse, SeatLayoutJson } from '../../../lib/types';
+import { updateTripAvailability } from '../../../lib/tripStatusManager';
 
 // Validate time format (HH:MM)
 const isValidTime = (time: string): boolean => /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(time);
@@ -54,6 +55,17 @@ export async function GET(request: NextRequest) {
         const date = searchParams.get('date'); // ISO 8601
         const limit = parseInt(searchParams.get('limit') || '10');
         const offset = parseInt(searchParams.get('offset') || '0');
+        const updateStatus = searchParams.get('updateStatus') === 'true';
+
+        // Update trip availability automatically if requested
+        if (updateStatus) {
+            try {
+                await updateTripAvailability();
+            } catch (error) {
+                console.warn('Failed to update trip availability:', error);
+                // Continue with the request even if status update fails
+            }
+        }
 
         const where: Prisma.TripWhereInput = {};
         if (from) where.from = { contains: from, mode: 'insensitive' };
@@ -110,13 +122,10 @@ export async function GET(request: NextRequest) {
     } catch (error) {
         console.error('Get trips error:', error);
 
-        // --- FIX: Use a type guard to check the error type ---
         let errorMessage = 'An unknown error occurred';
         if (error instanceof Error) {
-            // Inside this block, TypeScript knows `error` is an Error object
             errorMessage = `Internal server error: ${error.message}`;
         } else {
-            // Handle cases where the thrown value is not an Error object
             errorMessage = `An unexpected error occurred: ${String(error)}`;
         }
 
@@ -199,6 +208,17 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Check if trip should be automatically disabled
+        let finalIsAvailable = isAvailable ?? true;
+        const tripDateTime = new Date(`${date}T${departureTime}:00Z`);
+        const now = new Date();
+
+        if (tripDateTime <= now) {
+            finalIsAvailable = false;
+        } else if (!bus.seats.some(seat => seat.isAvailable)) {
+            finalIsAvailable = false;
+        }
+
         const trip = await prisma.trip.create({
             data: {
                 busId,
@@ -209,7 +229,7 @@ export async function POST(request: NextRequest) {
                 arrivalTime,
                 duration,
                 price,
-                isAvailable: isAvailable ?? true,
+                isAvailable: finalIsAvailable,
                 createdBy: user.email,
                 modifiedBy: user.email,
             },
@@ -245,10 +265,8 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error('Create trip error:', error);
 
-        // --- FIX: Use a type guard to check the error type ---
         let errorMessage = 'An unknown error occurred while creating the trip.';
         if (error instanceof Error) {
-            // Now TypeScript knows `error` is an Error object
             errorMessage = `Internal server error: ${error.message}`;
         }
 

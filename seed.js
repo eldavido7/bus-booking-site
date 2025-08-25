@@ -9,7 +9,7 @@ async function main() {
             id: "1",
             firstName: "Admin",
             lastName: "User",
-            email: "admin@kadzai.com",
+            email: "admin@TravelEase.com",
             password: "admin",
             phone: "+2348012345678",
             createdAt: new Date("2024-01-01T10:00:00Z"),
