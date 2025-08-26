@@ -132,21 +132,45 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tri
     }
 }
 
-export async function PATCH(request: NextRequest, context: { params: Promise<{ tripId: string }> }) {
+export async function PATCH(request: NextRequest, context: any) {
     try {
-        // More robust parameter extraction
-        const resolvedParams = await context.params;
-        const tripId = resolvedParams?.tripId;
+        // More robust parameter extraction that works in all environments
+        let tripId: string | undefined;
 
-        // Add validation
+        // Try multiple ways to extract the tripId
+        if (context?.params) {
+            if (typeof context.params === 'object' && context.params.then) {
+                // params is a Promise
+                const resolvedParams = await context.params;
+                tripId = resolvedParams?.tripId;
+            } else {
+                // params is a direct object
+                tripId = context.params?.tripId;
+            }
+        }
+
+        // Also try extracting from URL as fallback
         if (!tripId) {
+            const url = new URL(request.url);
+            const pathParts = url.pathname.split('/');
+            const tripIdIndex = pathParts.findIndex(part => part === 'trips') + 1;
+            if (tripIdIndex > 0 && tripIdIndex < pathParts.length) {
+                tripId = pathParts[tripIdIndex];
+            }
+        }
+
+        console.log('🔍 PATCH - Extracted tripId:', tripId);
+        console.log('🔍 PATCH - Context:', JSON.stringify(context, null, 2));
+        console.log('🔍 PATCH - Request URL:', request.url);
+
+        if (!tripId) {
+            console.error('❌ No tripId found in params or URL');
             return NextResponse.json(
                 { error: { code: 400, message: 'Trip ID is required' } },
                 { status: 400 }
             );
         }
 
-        console.log('PATCH Trip ID:', tripId); // Add logging for debugging
         const authResult = await verifyAdmin(request);
         if (!authResult.success) {
             return authResult.error;
@@ -154,6 +178,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ t
         const { user } = authResult;
 
         const body: Partial<TripInput> = await request.json();
+        console.log('📝 PATCH - Request body:', body);
+
         const { busId, from, to, date, departureTime, arrivalTime, duration, price, isAvailable } = body;
 
         // Validate trip exists
@@ -161,7 +187,9 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ t
             where: { id: tripId },
             include: { bus: { include: { seats: true } } },
         });
+
         if (!trip) {
+            console.error('❌ Trip not found:', tripId);
             return NextResponse.json(
                 { error: { code: 404, message: 'Trip not found' } },
                 { status: 404 }
@@ -183,12 +211,17 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ t
         }
 
         // Validate fields if provided
-        if (date && !isValidDate(date)) {
-            return NextResponse.json(
-                { error: { code: 400, message: 'Invalid date format (use ISO 8601)' } },
-                { status: 400 }
-            );
+        if (date) {
+            console.log('🔍 Validating date:', date);
+            if (!isValidDate(date)) {
+                console.log('❌ Date validation failed for:', date);
+                return NextResponse.json(
+                    { error: { code: 400, message: 'Invalid date format (use ISO 8601 or YYYY-MM-DD)' } },
+                    { status: 400 }
+                );
+            }
         }
+
         if (date && new Date(date) < new Date(new Date().toISOString().split('T')[0])) {
             return NextResponse.json(
                 { error: { code: 400, message: 'Trip date cannot be in the past' } },
@@ -252,7 +285,21 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ t
             finalIsAvailable = false;
         }
 
-        const updatedTrip: TripWithBus = await prisma.trip.update({
+        console.log('🔄 Updating trip with data:', {
+            tripId,
+            busId: busId || undefined,
+            from: from || undefined,
+            to: to || undefined,
+            date: date ? new Date(date) : undefined,
+            departureTime: departureTime || undefined,
+            arrivalTime: arrivalTime || undefined,
+            duration: duration || undefined,
+            price: price !== undefined ? price : undefined,
+            isAvailable: finalIsAvailable,
+            modifiedBy: user.email,
+        });
+
+        const updatedTrip = await prisma.trip.update({
             where: { id: tripId },
             data: {
                 busId: busId || undefined,
@@ -268,6 +315,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ t
             },
             include: { bus: { include: { seats: true } } },
         });
+
+        console.log('✅ Trip updated successfully:', updatedTrip.id);
 
         // After update, check if trip can be reactivated (if seats become available)
         if (!updatedTrip.isAvailable) {
@@ -313,7 +362,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ t
             },
         });
     } catch (error) {
-        console.error('Update trips error:', error);
+        console.error('❌ Update trips error:', error);
 
         let errorMessage = 'An unknown error occurred';
         if (error instanceof Error) {
