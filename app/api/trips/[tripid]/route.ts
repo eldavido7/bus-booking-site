@@ -47,9 +47,21 @@ type TripWithBus = Prisma.TripGetPayload<{
     include: { bus: { include: { seats: true } } };
 }>;
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ tripId: string }> }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ tripId: string }> }) {
     try {
-        const { tripId } = await params;
+        // More robust parameter extraction
+        const resolvedParams = await context.params;
+        const tripId = resolvedParams?.tripId;
+
+        // Add validation
+        if (!tripId) {
+            return NextResponse.json(
+                { error: { code: 400, message: 'Trip ID is required' } },
+                { status: 400 }
+            );
+        }
+
+        console.log('GET Trip ID:', tripId); // Add logging for debugging
 
         const authResult = await verifyAdmin(request);
         if (!authResult.success) {
@@ -120,10 +132,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ tripId: string }> }) {
+export async function PATCH(request: NextRequest, context: { params: Promise<{ tripId: string }> }) {
     try {
-        const { tripId } = await params;
+        // More robust parameter extraction
+        const resolvedParams = await context.params;
+        const tripId = resolvedParams?.tripId;
 
+        // Add validation
+        if (!tripId) {
+            return NextResponse.json(
+                { error: { code: 400, message: 'Trip ID is required' } },
+                { status: 400 }
+            );
+        }
+
+        console.log('PATCH Trip ID:', tripId); // Add logging for debugging
         const authResult = await verifyAdmin(request);
         if (!authResult.success) {
             return authResult.error;
