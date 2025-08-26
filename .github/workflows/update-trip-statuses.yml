@@ -14,4 +14,4 @@ jobs:
         run: |
           curl -X GET \
             -H "Authorization: Bearer ${{ secrets.VERCEL_CRON_SECRET }}" \
-            https://bus-booking-site.vercel.app//api/cron/update-trip-status
+            https://bus-booking-site.vercel.app/api/cron/update-trip-status
