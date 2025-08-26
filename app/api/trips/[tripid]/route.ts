@@ -61,7 +61,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tri
             );
         }
 
-        console.log('GET Trip ID:', tripId); // Add logging for debugging
+        // console.log('GET Trip ID:', tripId); // Add logging for debugging
 
         const authResult = await verifyAdmin(request);
         if (!authResult.success) {
@@ -159,9 +159,9 @@ export async function PATCH(request: NextRequest, context: any) {
             }
         }
 
-        console.log('🔍 PATCH - Extracted tripId:', tripId);
-        console.log('🔍 PATCH - Context:', JSON.stringify(context, null, 2));
-        console.log('🔍 PATCH - Request URL:', request.url);
+        // console.log('🔍 PATCH - Extracted tripId:', tripId);
+        // console.log('🔍 PATCH - Context:', JSON.stringify(context, null, 2));
+        // console.log('🔍 PATCH - Request URL:', request.url);
 
         if (!tripId) {
             console.error('❌ No tripId found in params or URL');
@@ -178,7 +178,7 @@ export async function PATCH(request: NextRequest, context: any) {
         const { user } = authResult;
 
         const body: Partial<TripInput> = await request.json();
-        console.log('📝 PATCH - Request body:', body);
+        // console.log('📝 PATCH - Request body:', body);
 
         const { busId, from, to, date, departureTime, arrivalTime, duration, price, isAvailable } = body;
 
@@ -212,9 +212,9 @@ export async function PATCH(request: NextRequest, context: any) {
 
         // Validate fields if provided
         if (date) {
-            console.log('🔍 Validating date:', date);
+            // console.log('🔍 Validating date:', date);
             if (!isValidDate(date)) {
-                console.log('❌ Date validation failed for:', date);
+                // console.log('❌ Date validation failed for:', date);
                 return NextResponse.json(
                     { error: { code: 400, message: 'Invalid date format (use ISO 8601 or YYYY-MM-DD)' } },
                     { status: 400 }
@@ -285,20 +285,6 @@ export async function PATCH(request: NextRequest, context: any) {
             finalIsAvailable = false;
         }
 
-        console.log('🔄 Updating trip with data:', {
-            tripId,
-            busId: busId || undefined,
-            from: from || undefined,
-            to: to || undefined,
-            date: date ? new Date(date) : undefined,
-            departureTime: departureTime || undefined,
-            arrivalTime: arrivalTime || undefined,
-            duration: duration || undefined,
-            price: price !== undefined ? price : undefined,
-            isAvailable: finalIsAvailable,
-            modifiedBy: user.email,
-        });
-
         const updatedTrip = await prisma.trip.update({
             where: { id: tripId },
             data: {
@@ -316,7 +302,7 @@ export async function PATCH(request: NextRequest, context: any) {
             include: { bus: { include: { seats: true } } },
         });
 
-        console.log('✅ Trip updated successfully:', updatedTrip.id);
+        // console.log('✅ Trip updated successfully:', updatedTrip.id);
 
         // After update, check if trip can be reactivated (if seats become available)
         if (!updatedTrip.isAvailable) {
